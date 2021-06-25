@@ -21,6 +21,7 @@
 #include <utility>
 
 #include "arrow/compute/kernels/codegen_internal.h"
+#include "arrow/compute/api_scalar.h"
 #include "arrow/compute/kernels/common.h"
 #include "arrow/compute/kernels/util_internal.h"
 #include "arrow/type.h"
@@ -838,6 +839,159 @@ struct Trunc {
   }
 };
 
+using RoundState = internal::OptionsWrapper<RoundOptions>;
+
+struct Round {
+  template <typename T, enable_if_t<std::is_floating_point<T>::value, bool> = true>
+  static constexpr bool ApproxEqual(T x, T y, int ulp = 8) {
+    // https://en.cppreference.com/w/cpp/types/numeric_limits/epsilon
+    // The machine epsilon has to be scaled to the magnitude of the values used
+    // and multiplied by the desired precision in ULPs (units in the last place)
+    return (std::fabs(x - y) <=
+            (std::numeric_limits<T>::epsilon() * std::fabs(x + y) * ulp))
+           // unless the result is subnormal
+           || (std::fabs(x - y) < std::numeric_limits<T>::min());
+  }
+
+  template <typename T, enable_if_t<std::is_floating_point<T>::value, bool> = true>
+  static constexpr bool IsHalf(T val) {
+    // |frac| == 0.5?
+    return ApproxEqual(std::fabs(std::fmod(val, T(1))), T(0.5));
+  }
+
+  template <typename T>
+  static constexpr enable_if_floating_point<T> RoundWithMultiple(T val, T mult) {
+    return (val / mult) * mult;
+  }
+
+  template <typename T>
+  static constexpr enable_if_floating_point<T> Floor(T val) {
+    return std::floor(val);
+  }
+
+  template <typename T>
+  static constexpr enable_if_floating_point<T> Ceiling(T val) {
+    return std::ceil(val);
+  }
+
+  template <typename T>
+  static constexpr enable_if_floating_point<T> Truncate(T val) {
+    return std::trunc(val);
+  }
+
+  template <typename T>
+  static constexpr enable_if_floating_point<T> TowardsInfinity(T val) {
+    return std::signbit(val) ? std::floor(val) : std::ceil(val);
+  }
+
+  template <typename T>
+  static constexpr enable_if_floating_point<T> HalfDown(T val) {
+    return std::ceil(val - T(0.5));
+  }
+
+  template <typename T>
+  static constexpr enable_if_floating_point<T> HalfUp(T val) {
+    return std::floor(val + T(0.5));
+  }
+
+  template <typename T>
+  static enable_if_floating_point<T> HalfToEven(T val) {
+    if (IsHalf(val)) {
+      auto floor = std::floor(val);
+      // Odd + 1, Even + 0
+      return floor + (std::fmod(std::fabs(floor), T(2)) >= T(1));
+    }
+    return std::round(val);
+  }
+
+  template <typename T>
+  static enable_if_floating_point<T> HalfToOdd(T val) {
+    if (IsHalf(val)) {
+      auto floor = std::floor(val);
+      // Odd + 0, Even + 1
+      return floor + (std::fmod(std::fabs(floor), T(2)) < T(1));
+    }
+    return std::round(val);
+  }
+
+  template <typename T>
+  static constexpr enable_if_floating_point<T> Nearest(T val) {
+    return std::round(val);
+  }
+
+  template <typename T>
+  static constexpr enable_if_floating_point<T> HalfTowardsZero(T val) {
+    return std::copysign(std::ceil(std::fabs(val) - T(0.5)), val);
+  }
+
+  template <typename T, typename Arg,
+            enable_if_t<std::is_integral<Arg>::value, bool> = true>
+  static constexpr enable_if_floating_point<T> Call(KernelContext* ctx, Arg arg,
+                                                    Status* st) {
+    return Call<T, T>(ctx, T(arg), st);
+  }
+
+  template <typename T, typename Arg,
+            enable_if_t<std::is_floating_point<Arg>::value, bool> = true>
+  static enable_if_floating_point<T> Call(KernelContext* ctx, Arg arg, Status* st) {
+    const RoundOptions& options = RoundState::Get(ctx);
+
+    T mult = std::fabs(options.multiple);
+    if (mult == T(0)) {
+      return T(0);
+    }
+
+    T result;
+    switch (options.round_mode) {
+      case RoundOptions::DOWNWARD:
+      case RoundOptions::TOWARDS_NEG_INFINITY:
+        result = Floor(arg);
+        // result = Floor::Call(ctx, arg, st);
+        break;
+      case RoundOptions::UPWARD:
+      case RoundOptions::TOWARDS_POS_INFINITY:
+        result = Ceiling(arg);
+        // result = Ceiling::Call(ctx, arg, st);
+        break;
+      case RoundOptions::TOWARDS_ZERO:
+      case RoundOptions::AWAY_FROM_INFINITY:
+        result = Truncate(arg);
+        // result = Truncate::Call(ctx, arg, st);
+        break;
+      case RoundOptions::TOWARDS_INFINITY:
+      case RoundOptions::AWAY_FROM_ZERO:
+        result = TowardsInfinity(arg);
+        break;
+      case RoundOptions::HALF_UP:
+        result = HalfUp(arg);
+        break;
+      case RoundOptions::HALF_DOWN:
+        result = HalfDown(arg);
+        break;
+      case RoundOptions::HALF_TO_EVEN:
+        result = HalfToEven(arg);
+        break;
+      case RoundOptions::HALF_TO_ODD:
+        result = HalfToOdd(arg);
+        break;
+      case RoundOptions::HALF_TOWARDS_ZERO:
+      case RoundOptions::HALF_AWAY_FROM_INFINITY:
+        result = HalfTowardsZero(arg);
+        break;
+      case RoundOptions::HALF_TOWARDS_INFINITY:
+      case RoundOptions::HALF_AWAY_FROM_ZERO:
+      case RoundOptions::NEAREST:
+        result = Nearest(arg);
+        break;
+      default:
+        *st = Status::Invalid("invalid rounding mode");
+        return arg;
+    }
+
+    return (mult == T(1)) ? result : RoundWithMultiple(result, mult);
+  }
+};
+
 // Generate a kernel given an arithmetic functor
 template <template <typename... Args> class KernelGenerator, typename Op>
 ArrayKernelExec ArithmeticExecFromOp(detail::GetTypeId get_id) {
@@ -920,6 +1074,36 @@ ArrayKernelExec ShiftExecFromOp(detail::GetTypeId get_id) {
 template <template <typename... Args> class KernelGenerator, typename Op>
 ArrayKernelExec GenerateArithmeticFloatingPoint(detail::GetTypeId get_id) {
   switch (get_id.id) {
+    case Type::FLOAT:
+      return KernelGenerator<FloatType, FloatType, Op>::Exec;
+    case Type::DOUBLE:
+      return KernelGenerator<DoubleType, DoubleType, Op>::Exec;
+    default:
+      DCHECK(false);
+      return ExecFail;
+  }
+}
+
+template <template <typename... Args> class KernelGenerator, typename Op>
+ArrayKernelExec GenerateArithmeticWithFloatOutType(detail::GetTypeId get_id) {
+  switch (get_id.id) {
+    case Type::INT8:
+      return KernelGenerator<DoubleType, Int8Type, Op>::Exec;
+    case Type::UINT8:
+      return KernelGenerator<DoubleType, UInt8Type, Op>::Exec;
+    case Type::INT16:
+      return KernelGenerator<DoubleType, Int16Type, Op>::Exec;
+    case Type::UINT16:
+      return KernelGenerator<DoubleType, UInt16Type, Op>::Exec;
+    case Type::INT32:
+      return KernelGenerator<DoubleType, Int32Type, Op>::Exec;
+    case Type::UINT32:
+      return KernelGenerator<DoubleType, UInt32Type, Op>::Exec;
+    case Type::INT64:
+    case Type::TIMESTAMP:
+      return KernelGenerator<DoubleType, Int64Type, Op>::Exec;
+    case Type::UINT64:
+      return KernelGenerator<DoubleType, UInt64Type, Op>::Exec;
     case Type::FLOAT:
       return KernelGenerator<FloatType, FloatType, Op>::Exec;
     case Type::DOUBLE:
@@ -1237,6 +1421,23 @@ std::shared_ptr<ScalarFunction> MakeUnaryArithmeticFunctionNotNull(
   for (const auto& ty : NumericTypes()) {
     auto exec = ArithmeticExecFromOp<ScalarUnaryNotNull, Op>(ty);
     DCHECK_OK(func->AddKernel({ty}, ty, exec));
+  }
+  return func;
+}
+
+// Like MakeUnaryArithmeticFunction, but for arithmetic ops that output floating-point
+// type matching floating-point input and DoubleType for integral inputs, only on non-null
+// output.
+template <typename Op>
+std::shared_ptr<ScalarFunction> MakeUnaryArithmeticFunctionWithFloatOutType(
+    std::string name, const FunctionDoc* doc,
+    const FunctionOptions* default_options = NULLPTR) {
+  auto func =
+      std::make_shared<ArithmeticFunction>(name, Arity::Unary(), doc, default_options);
+  for (const auto& ty : NumericTypes()) {
+    auto out_ty = is_integer(ty->id()) ? float64() : ty;
+    auto exec = GenerateArithmeticWithFloatOutType<ScalarUnary, Op>(ty);
+    DCHECK_OK(func->AddKernel({ty}, out_ty, exec));
   }
   return func;
 }
@@ -1606,6 +1807,13 @@ const FunctionDoc trunc_doc{
     ("Calculate the nearest integer not greater in magnitude than to the "
      "argument element-wise."),
     {"x"}};
+
+const FunctionDoc round_doc{
+    "Round the arguments element-wise",
+    ("Options are used to control the rounding mode and rounding multiple.\n"
+     "Default behavior is to round to nearest integer."),
+    {"x"},
+    "RoundOptions"};
 }  // namespace
 
 void RegisterScalarArithmetic(FunctionRegistry* registry) {
@@ -1816,6 +2024,11 @@ void RegisterScalarArithmetic(FunctionRegistry* registry) {
 
   auto trunc = MakeUnaryArithmeticFunctionFloatingPoint<Trunc>("trunc", &trunc_doc);
   DCHECK_OK(registry->AddFunction(std::move(trunc)));
+
+  auto round_opts = RoundOptions::Defaults();
+  auto round = MakeUnaryArithmeticFunctionWithFloatOutType<Round>("round", &round_doc,
+                                                                  &round_opts);
+  DCHECK_OK(registry->AddFunction(std::move(round)));
 }
 
 }  // namespace internal

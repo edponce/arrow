@@ -43,8 +43,8 @@
 namespace arrow {
 namespace compute {
 
-template <typename T>
-class TestUnaryArithmetic : public TestBase {
+template <typename T, typename Options>
+class TestBaseUnaryArithmetic : public TestBase {
  protected:
   using ArrowType = T;
   using CType = typename ArrowType::c_type;
@@ -53,10 +53,7 @@ class TestUnaryArithmetic : public TestBase {
     return TypeTraits<ArrowType>::type_singleton();
   }
 
-  using UnaryFunction =
-      std::function<Result<Datum>(const Datum&, ArithmeticOptions, ExecContext*)>;
-
-  void SetUp() override { options_.check_overflow = false; }
+  using UnaryFunction = std::function<Result<Datum>(const Datum&, Options, ExecContext*)>;
 
   std::shared_ptr<Scalar> MakeNullScalar() {
     return arrow::MakeNullScalar(type_singleton());
@@ -65,6 +62,8 @@ class TestUnaryArithmetic : public TestBase {
   std::shared_ptr<Scalar> MakeScalar(CType value) {
     return *arrow::MakeScalar(type_singleton(), value);
   }
+
+  void SetUp() override {}
 
   // (CScalar, CScalar)
   void AssertUnaryOp(UnaryFunction func, CType argument, CType expected) {
@@ -150,18 +149,29 @@ class TestUnaryArithmetic : public TestBase {
     AssertArraysApproxEqual(*expected, *actual, /*verbose=*/true, equal_options_);
   }
 
-  void SetOverflowCheck(bool value = true) { options_.check_overflow = value; }
-
   void SetNansEqual(bool value = true) {
     this->equal_options_ = equal_options_.nans_equal(value);
   }
 
-  ArithmeticOptions options_ = ArithmeticOptions();
+  Options options_ = Options();
   EqualOptions equal_options_ = EqualOptions::Defaults();
 };
 
+template <typename T, typename Options>
+class TestUnaryArithmetic : public TestBaseUnaryArithmetic<T, Options> {};
+
 template <typename T>
-class TestUnaryArithmeticIntegral : public TestUnaryArithmetic<T> {};
+class TestUnaryArithmetic<T, ArithmeticOptions>
+    : public TestBaseUnaryArithmetic<T, ArithmeticOptions> {
+  using Base = TestBaseUnaryArithmetic<T, ArithmeticOptions>;
+  using Base::options_;
+
+ protected:
+  void SetOverflowCheck(bool value) { options_.check_overflow = value; }
+};
+
+template <typename T>
+class TestUnaryArithmeticIntegral : public TestUnaryArithmetic<T, ArithmeticOptions> {};
 
 template <typename T>
 class TestUnaryArithmeticSigned : public TestUnaryArithmeticIntegral<T> {};
@@ -170,7 +180,17 @@ template <typename T>
 class TestUnaryArithmeticUnsigned : public TestUnaryArithmeticIntegral<T> {};
 
 template <typename T>
-class TestUnaryArithmeticFloating : public TestUnaryArithmetic<T> {};
+class TestUnaryArithmeticFloating : public TestUnaryArithmetic<T, ArithmeticOptions> {};
+
+template <typename T>
+class TestUnaryArithmetic<T, RoundOptions>
+    : public TestBaseUnaryArithmetic<T, RoundOptions> {};
+
+template <typename T>
+class TestUnaryRoundIntegral : public TestBaseUnaryArithmetic<T, RoundOptions> {};
+
+template <typename T>
+class TestUnaryRoundFloating : public TestBaseUnaryArithmetic<T, RoundOptions> {};
 
 template <typename T>
 class TestBinaryArithmetic : public TestBase {
@@ -402,6 +422,9 @@ TYPED_TEST_SUITE(TestUnaryArithmeticIntegral, IntegralTypes);
 TYPED_TEST_SUITE(TestUnaryArithmeticSigned, SignedIntegerTypes);
 TYPED_TEST_SUITE(TestUnaryArithmeticUnsigned, UnsignedIntegerTypes);
 TYPED_TEST_SUITE(TestUnaryArithmeticFloating, FloatingTypes);
+
+TYPED_TEST_SUITE(TestUnaryRoundIntegral, IntegralTypes);
+TYPED_TEST_SUITE(TestUnaryRoundFloating, FloatingTypes);
 
 TYPED_TEST_SUITE(TestBinaryArithmeticIntegral, IntegralTypes);
 TYPED_TEST_SUITE(TestBinaryArithmeticSigned, SignedIntegerTypes);
@@ -1070,7 +1093,7 @@ TEST(TestUnaryArithmetic, DispatchBest) {
   }
 
   // Fail on null type
-  for (std::string name : {"atan", "sign", "floor", "ceil", "trunc"}) {
+  for (std::string name : {"atan", "sign", "floor", "ceil", "trunc", "round"}) {
     CheckDispatchFails(name, {null()});
   }
 
@@ -1095,7 +1118,7 @@ TEST(TestUnaryArithmetic, DispatchBest) {
   }
 
   // Float types
-  for (std::string name : {"atan", "floor", "ceil", "trunc"}) {
+  for (std::string name : {"atan", "sign", "floor", "ceil", "trunc", "round"}) {
     for (const auto& ty : {float32(), float64()}) {
       CheckDispatchBest(name, {ty}, {ty});
       CheckDispatchBest(name, {dictionary(int8(), ty)}, {ty});
@@ -1116,7 +1139,7 @@ TEST(TestUnaryArithmetic, DispatchBest) {
   }
 
   // Integer -> Float64
-  for (std::string name : {"atan", "floor", "ceil", "trunc"}) {
+  for (std::string name : {"atan", "floor", "ceil", "trunc", "round"}) {
     for (const auto& ty :
          {int8(), int16(), int32(), int64(), uint8(), uint16(), uint32(), uint64()}) {
       CheckDispatchBest(name, {ty}, {float64()});
@@ -1331,6 +1354,37 @@ TYPED_TEST(TestUnaryArithmeticFloating, AbsoluteValue) {
     this->AssertUnaryOp(AbsoluteValue, min, max);
     this->AssertUnaryOp(AbsoluteValue, max, max);
   }
+}
+
+TYPED_TEST(TestUnaryRoundIntegral, Round) {
+  using CType = typename TestFixture::CType;
+  auto min = std::numeric_limits<CType>::min();
+  auto max = std::numeric_limits<CType>::max();
+
+  this->options_.round_mode = RoundOptions::NEAREST;
+
+  this->AssertUnaryOp(Round, "[]", ArrayFromJSON(float64(), "[]"));
+  this->AssertUnaryOp(Round, "[null]", ArrayFromJSON(float64(), "[null]"));
+  this->AssertUnaryOp(Round, "[1, null, -10]",
+                      ArrayFromJSON(float64(), "[1, null, -10]"));
+  this->AssertUnaryOp(Round, "[0]", ArrayFromJSON(float64(), "[0]"));
+  this->AssertUnaryOp(Round, "[1, 10, 127]", ArrayFromJSON(float64(), "[1, 10, 127]"));
+  this->AssertUnaryOp(Round, "[-1, -10, -127]",
+                      ArrayFromJSON(float64(), "[-1, -10, -127]"));
+  this->AssertUnaryOp(Round, MakeArray(min, max), MakeArray(double(min), double(max)));
+}
+
+TYPED_TEST(TestUnaryRoundFloating, Round) {
+  using CType = typename TestFixture::CType;
+  auto min = std::numeric_limits<CType>::lowest();
+  auto max = std::numeric_limits<CType>::max();
+
+  this->options_.round_mode = RoundOptions::NEAREST;
+
+  this->AssertUnaryOp(Round, "[]", "[]");
+  this->AssertUnaryOp(Round, "[null]", "[null]");
+  this->AssertUnaryOp(Round, "[1.4, null, 10.3]", "[1, null, 10]");
+  this->AssertUnaryOp(Round, MakeArray(min, max), MakeArray(min, max));
 }
 
 TEST(TestBinaryDecimalArithmetic, DispatchBest) {

@@ -127,6 +127,17 @@ variants which detect domain errors where appropriate.
    tan
    tan_checked
 
+Rounding
+--------
+
+These functions expect a single numeric input and output an approximate
+floating-point representation. If one of the inputs is `null` they return ``null``.
+
+.. autosummary::
+   :toctree: ../generated/
+
+   round
+
 Comparisons
 -----------
 

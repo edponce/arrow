@@ -49,8 +49,56 @@ class ARROW_EXPORT ElementWiseAggregateOptions : public FunctionOptions {
   explicit ElementWiseAggregateOptions(bool skip_nulls = true);
   constexpr static char const kTypeName[] = "ElementWiseAggregateOptions";
   static ElementWiseAggregateOptions Defaults() { return ElementWiseAggregateOptions{}; }
-
   bool skip_nulls;
+};
+
+class ARROW_EXPORT RoundOptions : public FunctionOptions {
+ public:
+  enum RoundMode {
+    // floor (towards negative infinity)
+    DOWNWARD,
+    TOWARDS_NEG_INFINITY,
+
+    // ceiling (towards positive infinity)
+    UPWARD,
+    TOWARDS_POS_INFINITY,
+
+    // truncate
+    TOWARDS_ZERO,
+    AWAY_FROM_INFINITY,
+
+    // towards +-infinity (away from zero)
+    TOWARDS_INFINITY,
+    AWAY_FROM_ZERO,
+
+    // Tie-breakers
+    // half down (half towards negative infinity)
+    HALF_DOWN,
+
+    // half up (half towards positive infinity)
+    HALF_UP,
+
+    // half to even
+    HALF_TO_EVEN,
+
+    // half to odd
+    HALF_TO_ODD,
+
+    // half towards zero
+    HALF_TOWARDS_ZERO,
+    HALF_AWAY_FROM_INFINITY,
+
+    // half towards infinity (half away from zero = nearest)
+    HALF_TOWARDS_INFINITY,
+    HALF_AWAY_FROM_ZERO,
+    NEAREST,
+  };
+  explicit RoundOptions(double multiple = 1., RoundMode round_mode = NEAREST)
+      : multiple(multiple), round_mode(round_mode) {}
+  constexpr static char const kTypeName[] = "RoundOptions";
+  static RoundOptions Defaults() { return RoundOptions(); }
+  double multiple;
+  RoundMode round_mode;
 };
 
 /// Options for var_args_join.
@@ -545,9 +593,20 @@ Result<Datum> MinElementWise(
 ///
 /// \param[in] arg the value to extract sign from
 /// \param[in] ctx the function execution context, optional
-/// \return the elementwise sign function
+/// \return the element-wise sign function
 ARROW_EXPORT
 Result<Datum> Sign(const Datum& arg, ExecContext* ctx = NULLPTR);
+
+/// \brief Round a value to a given multiple. Array values can be of arbitrary
+/// length. If argument is null the result will be null.
+///
+/// \param[in] arg the value to round
+/// \param[in] options rounding options (rounding mode and multiple), optional
+/// \param[in] ctx the function execution context, optional
+/// \return the element-wise rounded value
+ARROW_EXPORT
+Result<Datum> Round(const Datum& arg, RoundOptions options = RoundOptions::Defaults(),
+                    ExecContext* ctx = NULLPTR);
 
 /// \brief Compare a numeric array with a scalar.
 ///

@@ -254,7 +254,8 @@ Arithmetic functions
 These functions expect inputs of numeric type and apply a given arithmetic
 operation to each element(s) gathered from the input(s).  If any of the
 input element(s) is null, the corresponding output element is null.
-Input(s) will be cast to the :ref:`common numeric type <common-numeric-type>`
+For binary functions, input(s) will be cast to the
+:ref:`common numeric type <common-numeric-type>`
 (and dictionary decoded, if applicable) before the operation is applied.
 
 The default variant of these functions does not detect overflow (the result
@@ -423,6 +424,74 @@ variants that check for domain errors if needed.
 +--------------------------+------------+--------------------+---------------------+
 | tan_checked              | Unary      | Float32/Float64    | Float32/Float64     |
 +--------------------------+------------+--------------------+---------------------+
+
+Rounding functions
+~~~~~~~~~~~~~~~~~~
+
+These functions displace numeric input(s) to approximate and shorter numeric
+representation(s).  Integral input(s) produce floating-point output(s) of same value.
+If any of the input element(s) is null, the corresponding output element is null.
+
++--------------------------+------------+--------------------+---------------------+--------------------------------+
+| Function name            | Arity      | Input types        | Output type         | Notes | Options class          |
++==========================+============+====================+=====================+================================+
+| round                    | Unary      | Numeric            | Float32/64          | (1)   | :struct:`RoundOptions` |
++--------------------------+------------+--------------------+---------------------+--------------------------------+
+
+* \(1) Output value is a 64-bit floating-point for integral inputs and the retains
+  the same type for floating-point inputs.  By default ``round`` displaces a value
+  to the nearest integer.  Options are available to control the rounding behavior.
+  The ``rounding mode`` option specifies displacement direction and tie-breaking
+  rules for half-way values.  The ``rounding multiple`` option specifies the
+  resulting scale and precision. Only the magnitude of the ``rounding multiple``
+  is used, its sign is ignored.
+
++-------------------------+---------------------------------+
+| Round mode              | Description/Examples            |
++=========================+=================================+
+| DOWNWARD                | Equivalent to ``floor(x)``      |
+| TOWARDS_NEG_INFINITY    | 3.7 = 3, -3.2 = -4              |
++-------------------------+---------------------------------+
+| UPWARD                  | Equivalent to ``ceil(x)``       |
+| TOWARDS_POS_INFINITY    | 3.2 = 4, -3.7 = -3              |
++-------------------------+---------------------------------+
+| TOWARDS_ZERO            | Equivalent to ``trunc(x)``      |
+| AWAY_FROM_INFINITY      | 3.7 = 3, -3.7 = -3              |
++-------------------------+---------------------------------+
+| TOWARDS_INFINITY        | 3.2 = 4, -3.2 = -4              |
+| AWAY_FROM_ZERO          |                                 |
++-------------------------+---------------------------------+
+| HALF_UP                 | 3.5 = 4, 4.5 = 5, -3.5 = -3     |
+| HALF_POS_INFINITY       |                                 |
++-------------------------+---------------------------------+
+| HALF_DOWN               | 3.5 = 3, 4.5 = 4, -3.5 = -4     |
+| HALF_NEG_INFINITY       |                                 |
++-------------------------+---------------------------------+
+| HALF_TO_EVEN            | 3.5 = 4, 4.5 = 4, -3.5 = -4     |
++-------------------------+---------------------------------+
+| HALF_TO_ODD             | 3.5 = 3, 4.5 = 5, -3.5 = -3     |
++-------------------------+---------------------------------+
+| HALF_TOWARDS_ZERO       | 3.5 = 3, 4.5 = 4, -3.5 = -3     |
+| HALF_AWAY_FROM_INFINITY |                                 |
++-------------------------+---------------------------------+
+| HALF_TOWARDS_INFINITY   | Round nearest integer (default) |
+| HALF_AWAY_FROM_ZERO     | 3.5 = 4, 4.5 = 5, -3.5 = -4     |
+| NEAREST                 |                                 |
++-------------------------+---------------------------------+
+
++----------------+----------------------------+
+| Round multiple | Description                |
++=========================+===================+
+| 1.0            | Round to integer (default) |
++----------------+----------------------------+
+| 0.001          | Round to 3 decimal places  |
++----------------+----------------------------+
+| 10             | Round to multiple of 10    |
++----------------+----------------------------+
+| 2              | Round to multiple of 2     |
++----------------+----------------------------+
+| 0              | Returns 0                  |
++----------------+----------------------------+
 
 Comparisons
 ~~~~~~~~~~~
