@@ -934,7 +934,7 @@ struct Round {
   template <typename T, typename Arg,
             enable_if_t<std::is_floating_point<Arg>::value, bool> = true>
   static enable_if_floating_point<T> Call(KernelContext* ctx, Arg arg, Status* st) {
-    const RoundOptions& options = RoundState::Get(ctx);
+    const auto options = RoundState::Get(ctx);
 
     T mult = std::fabs(options.multiple);
     if (mult == T(0)) {
