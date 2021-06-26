@@ -158,15 +158,18 @@ class TestBaseUnaryArithmetic : public TestBase {
 };
 
 template <typename T, typename Options>
-class TestUnaryArithmetic : public TestBaseUnaryArithmetic<T, Options> {};
+class TestUnaryArithmetic : public TestBaseUnaryArithmetic<T, Options> {
+ protected:
+  using Base = TestBaseUnaryArithmetic<T, Options>;
+  using Base::options_;
+};
 
 template <typename T>
 class TestUnaryArithmetic<T, ArithmeticOptions>
     : public TestBaseUnaryArithmetic<T, ArithmeticOptions> {
+ protected:
   using Base = TestBaseUnaryArithmetic<T, ArithmeticOptions>;
   using Base::options_;
-
- protected:
   void SetOverflowCheck(bool value) { options_.check_overflow = value; }
 };
 
@@ -187,10 +190,16 @@ class TestUnaryArithmetic<T, RoundOptions>
     : public TestBaseUnaryArithmetic<T, RoundOptions> {};
 
 template <typename T>
-class TestUnaryRoundIntegral : public TestBaseUnaryArithmetic<T, RoundOptions> {};
+class TestUnaryRoundIntegral : public TestUnaryArithmetic<T, RoundOptions> {};
 
 template <typename T>
-class TestUnaryRoundFloating : public TestBaseUnaryArithmetic<T, RoundOptions> {};
+class TestUnaryRoundSigned : public TestUnaryRoundIntegral<T> {};
+
+template <typename T>
+class TestUnaryRoundUnsigned : public TestUnaryRoundIntegral<T> {};
+
+template <typename T>
+class TestUnaryRoundFloating : public TestUnaryArithmetic<T, RoundOptions> {};
 
 template <typename T>
 class TestBinaryArithmetic : public TestBase {
@@ -424,6 +433,8 @@ TYPED_TEST_SUITE(TestUnaryArithmeticUnsigned, UnsignedIntegerTypes);
 TYPED_TEST_SUITE(TestUnaryArithmeticFloating, FloatingTypes);
 
 TYPED_TEST_SUITE(TestUnaryRoundIntegral, IntegralTypes);
+TYPED_TEST_SUITE(TestUnaryRoundSigned, SignedIntegerTypes);
+TYPED_TEST_SUITE(TestUnaryRoundUnsigned, UnsignedIntegerTypes);
 TYPED_TEST_SUITE(TestUnaryRoundFloating, FloatingTypes);
 
 TYPED_TEST_SUITE(TestBinaryArithmeticIntegral, IntegralTypes);
@@ -1356,12 +1367,10 @@ TYPED_TEST(TestUnaryArithmeticFloating, AbsoluteValue) {
   }
 }
 
-TYPED_TEST(TestUnaryRoundIntegral, Round) {
+TYPED_TEST(TestUnaryRoundSigned, Round) {
   using CType = typename TestFixture::CType;
   auto min = std::numeric_limits<CType>::min();
   auto max = std::numeric_limits<CType>::max();
-
-  this->options_.round_mode = RoundOptions::NEAREST;
 
   this->AssertUnaryOp(Round, "[]", ArrayFromJSON(float64(), "[]"));
   this->AssertUnaryOp(Round, "[null]", ArrayFromJSON(float64(), "[null]"));
@@ -1371,7 +1380,22 @@ TYPED_TEST(TestUnaryRoundIntegral, Round) {
   this->AssertUnaryOp(Round, "[1, 10, 127]", ArrayFromJSON(float64(), "[1, 10, 127]"));
   this->AssertUnaryOp(Round, "[-1, -10, -127]",
                       ArrayFromJSON(float64(), "[-1, -10, -127]"));
-  this->AssertUnaryOp(Round, MakeArray(min, max), MakeArray(double(min), double(max)));
+  this->AssertUnaryOp(Round, MakeScalar(min), *arrow::MakeScalar(float64(), min));
+  this->AssertUnaryOp(Round, MakeScalar(max), *arrow::MakeScalar(float64(), max));
+}
+
+TYPED_TEST(TestUnaryRoundUnsigned, Round) {
+  using CType = typename TestFixture::CType;
+  auto min = std::numeric_limits<CType>::min();
+  auto max = std::numeric_limits<CType>::max();
+
+  this->AssertUnaryOp(Round, "[]", ArrayFromJSON(float64(), "[]"));
+  this->AssertUnaryOp(Round, "[null]", ArrayFromJSON(float64(), "[null]"));
+  this->AssertUnaryOp(Round, "[1, null, 10]", ArrayFromJSON(float64(), "[1, null, 10]"));
+  this->AssertUnaryOp(Round, "[0]", ArrayFromJSON(float64(), "[0]"));
+  this->AssertUnaryOp(Round, "[1, 10, 127]", ArrayFromJSON(float64(), "[1, 10, 127]"));
+  this->AssertUnaryOp(Round, MakeScalar(min), *arrow::MakeScalar(float64(), min));
+  this->AssertUnaryOp(Round, MakeScalar(max), *arrow::MakeScalar(float64(), max));
 }
 
 TYPED_TEST(TestUnaryRoundFloating, Round) {

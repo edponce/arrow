@@ -925,67 +925,63 @@ struct Round {
   }
 
   template <typename T, typename Arg,
-            enable_if_t<std::is_integral<Arg>::value, bool> = true>
-  static constexpr enable_if_floating_point<T> Call(KernelContext* ctx, Arg arg,
-                                                    Status* st) {
-    return Call<T, T>(ctx, T(arg), st);
-  }
-
-  template <typename T, typename Arg,
-            enable_if_t<std::is_floating_point<Arg>::value, bool> = true>
+            enable_if_t<std::is_arithmetic<Arg>::value, bool> = true>
   static enable_if_floating_point<T> Call(KernelContext* ctx, Arg arg, Status* st) {
-    const auto options = RoundState::Get(ctx);
+    auto options = RoundState::Get(ctx);
 
     T mult = std::fabs(options.multiple);
     if (mult == T(0)) {
       return T(0);
     }
 
+    // Cast input based on output type
+    auto arg_ = T(arg);
+
     T result;
     switch (options.round_mode) {
       case RoundOptions::DOWNWARD:
       case RoundOptions::TOWARDS_NEG_INFINITY:
-        result = Floor(arg);
-        // result = Floor::Call(ctx, arg, st);
+        result = Floor(arg_);
+        // result = Floor::Call(ctx, arg_, st);
         break;
       case RoundOptions::UPWARD:
       case RoundOptions::TOWARDS_POS_INFINITY:
-        result = Ceiling(arg);
-        // result = Ceiling::Call(ctx, arg, st);
+        result = Ceiling(arg_);
+        // result = Ceiling::Call(ctx, arg_, st);
         break;
       case RoundOptions::TOWARDS_ZERO:
       case RoundOptions::AWAY_FROM_INFINITY:
-        result = Truncate(arg);
-        // result = Truncate::Call(ctx, arg, st);
+        result = Truncate(arg_);
+        // result = Truncate::Call(ctx, arg_, st);
         break;
       case RoundOptions::TOWARDS_INFINITY:
       case RoundOptions::AWAY_FROM_ZERO:
-        result = TowardsInfinity(arg);
+        result = TowardsInfinity(arg_);
         break;
       case RoundOptions::HALF_UP:
-        result = HalfUp(arg);
+        result = HalfUp(arg_);
         break;
       case RoundOptions::HALF_DOWN:
-        result = HalfDown(arg);
+        result = HalfDown(arg_);
         break;
       case RoundOptions::HALF_TO_EVEN:
-        result = HalfToEven(arg);
+        result = HalfToEven(arg_);
         break;
       case RoundOptions::HALF_TO_ODD:
-        result = HalfToOdd(arg);
+        result = HalfToOdd(arg_);
         break;
       case RoundOptions::HALF_TOWARDS_ZERO:
       case RoundOptions::HALF_AWAY_FROM_INFINITY:
-        result = HalfTowardsZero(arg);
+        result = HalfTowardsZero(arg_);
         break;
       case RoundOptions::HALF_TOWARDS_INFINITY:
       case RoundOptions::HALF_AWAY_FROM_ZERO:
       case RoundOptions::NEAREST:
-        result = Nearest(arg);
+        result = Nearest(arg_);
         break;
       default:
         *st = Status::Invalid("invalid rounding mode");
-        return arg;
+        return arg_;
     }
 
     return (mult == T(1)) ? result : RoundWithMultiple(result, mult);
@@ -1431,13 +1427,13 @@ std::shared_ptr<ScalarFunction> MakeUnaryArithmeticFunctionNotNull(
 template <typename Op>
 std::shared_ptr<ScalarFunction> MakeUnaryArithmeticFunctionWithFloatOutType(
     std::string name, const FunctionDoc* doc,
-    const FunctionOptions* default_options = NULLPTR) {
+    const FunctionOptions* default_options = NULLPTR, KernelInit init = NULLPTR) {
   auto func =
       std::make_shared<ArithmeticFunction>(name, Arity::Unary(), doc, default_options);
   for (const auto& ty : NumericTypes()) {
     auto out_ty = is_integer(ty->id()) ? float64() : ty;
     auto exec = GenerateArithmeticWithFloatOutType<ScalarUnary, Op>(ty);
-    DCHECK_OK(func->AddKernel({ty}, out_ty, exec));
+    DCHECK_OK(func->AddKernel({ty}, out_ty, exec, init));
   }
   return func;
 }
@@ -2025,9 +2021,9 @@ void RegisterScalarArithmetic(FunctionRegistry* registry) {
   auto trunc = MakeUnaryArithmeticFunctionFloatingPoint<Trunc>("trunc", &trunc_doc);
   DCHECK_OK(registry->AddFunction(std::move(trunc)));
 
-  auto round_opts = RoundOptions::Defaults();
-  auto round = MakeUnaryArithmeticFunctionWithFloatOutType<Round>("round", &round_doc,
-                                                                  &round_opts);
+  static auto kRoundOptions = RoundOptions::Defaults();
+  auto round = MakeUnaryArithmeticFunctionWithFloatOutType<Round>(
+      "round", &round_doc, &kRoundOptions, RoundState::Init);
   DCHECK_OK(registry->AddFunction(std::move(round)));
 }
 
