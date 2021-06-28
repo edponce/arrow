@@ -1401,7 +1401,7 @@ TYPED_TEST(TestUnaryRoundSigned, Round) {
   }
 
   // Test different round multiples for NEAREST rounding mode
-  float round_multiples[] = {-2, -0.05, 0.1, 0, 10, 100};
+  float round_multiples[] = {-2.0F, -0.05F, 0.1F, 0.0F, 10.0F, 100.0F};
   this->SetRoundMode(RoundOptions::NEAREST);
 
   for (auto round_multiple : round_multiples) {
@@ -1410,20 +1410,20 @@ TYPED_TEST(TestUnaryRoundSigned, Round) {
     this->AssertUnaryOp(Round, "[]", ArrayFromJSON(float64(), "[]"));
     this->AssertUnaryOp(Round, "[null]", ArrayFromJSON(float64(), "[null]"));
 
-    if (round_multiple == -2) {
+    if (round_multiple == -2.0F) {
       this->AssertUnaryOp(Round, values,
                           ArrayFromJSON(float64(), "[0, 2, -14, -50, 126]"));
-    } else if (round_multiple == -0.05) {
+    } else if (round_multiple == -0.05F) {
       this->AssertUnaryOp(Round, values,
                           ArrayFromJSON(float64(), "[0, 1, -13, -50, 125]"));
-    } else if (round_multiple == 0.1) {
+    } else if (round_multiple == 0.1F) {
       this->AssertUnaryOp(Round, values, ArrayFromJSON(float64(), values));
-    } else if (round_multiple == 0) {
+    } else if (round_multiple == 0.0F) {
       this->AssertUnaryOp(Round, values, ArrayFromJSON(float64(), "[0, 0, 0, 0, 0]"));
-    } else if (round_multiple == 10) {
+    } else if (round_multiple == 10.0F) {
       this->AssertUnaryOp(Round, values,
                           ArrayFromJSON(float64(), "[0, 0, -10, -50, 130]"));
-    } else if (round_multiple == 100) {
+    } else if (round_multiple == 100.0F) {
       this->AssertUnaryOp(Round, values,
                           ArrayFromJSON(float64(), "[0, 0, 0, -100, 100]"));
     }
@@ -1457,7 +1457,7 @@ TYPED_TEST(TestUnaryRoundUnsigned, Round) {
   }
 
   // Test different round multiples for NEAREST rounding mode
-  float round_multiples[] = {-2, -0.05, 0.1, 0, 10, 100};
+  float round_multiples[] = {-2.0F, -0.05F, 0.1F, 0.0F, 10.0F, 100.0F};
   this->SetRoundMode(RoundOptions::NEAREST);
 
   for (auto round_multiple : round_multiples) {
@@ -1466,17 +1466,17 @@ TYPED_TEST(TestUnaryRoundUnsigned, Round) {
     this->AssertUnaryOp(Round, "[]", ArrayFromJSON(float64(), "[]"));
     this->AssertUnaryOp(Round, "[null]", ArrayFromJSON(float64(), "[null]"));
 
-    if (round_multiple == -2) {
+    if (round_multiple == -2.0F) {
       this->AssertUnaryOp(Round, values, ArrayFromJSON(float64(), "[0, 2, 14, 50, 126]"));
-    } else if (round_multiple == -0.05) {
-      this->AssertUnaryOp(Round, values, ArrayFromJSON(float64(), "[0, 1, 13, 50, 125]"));
-    } else if (round_multiple == 0.1) {
+    } else if (round_multiple == -0.05F) {
       this->AssertUnaryOp(Round, values, ArrayFromJSON(float64(), values));
-    } else if (round_multiple == 0) {
+    } else if (round_multiple == 0.1F) {
+      this->AssertUnaryOp(Round, values, ArrayFromJSON(float64(), values));
+    } else if (round_multiple == 0.0F) {
       this->AssertUnaryOp(Round, values, ArrayFromJSON(float64(), "[0, 0, 0, 0, 0]"));
-    } else if (round_multiple == 10) {
+    } else if (round_multiple == 10.0F) {
       this->AssertUnaryOp(Round, values, ArrayFromJSON(float64(), "[0, 0, 10, 50, 130]"));
-    } else if (round_multiple == 100) {
+    } else if (round_multiple == 100.0F) {
       this->AssertUnaryOp(Round, values, ArrayFromJSON(float64(), "[0, 0, 0, 100, 100]"));
     }
   }
@@ -1552,7 +1552,7 @@ TYPED_TEST(TestUnaryRoundFloating, Round) {
   }
 
   // Test different round multiples for NEAREST rounding mode
-  float round_multiples[] = {-2, -0.05, 0.1, 0, 10, 100};
+  float round_multiples[] = {-2.0F, -0.05F, 0.1F, 0.0F, 10.0F, 100.0F};
   this->SetRoundMode(RoundOptions::NEAREST);
   std::string values2("[320, 3.5, 3.07, 4.5, -3.2, -35, -3.07]");
 
@@ -1561,24 +1561,24 @@ TYPED_TEST(TestUnaryRoundFloating, Round) {
 
     this->AssertUnaryOp(Round, "[]", "[]");
     this->AssertUnaryOp(Round, "[null]", "[null]");
-    if (round_multiple == 0) {
+    if (round_multiple == 0.0F) {
       this->AssertUnaryOp(Round, "[0, Inf, -Inf, NaN, -NaN]", "[0, 0, 0, 0, 0]");
     } else {
       this->AssertUnaryOp(Round, "[0, Inf, -Inf, NaN, -NaN]",
                           "[0, Inf, -Inf, NaN, -NaN]");
     }
 
-    if (round_multiple == -2) {
+    if (round_multiple == -2.0F) {
       this->AssertUnaryOp(Round, values2, "[320, 4, 4, 4, -4, -36, -4]");
-    } else if (round_multiple == -0.05) {
+    } else if (round_multiple == -0.05F) {
       this->AssertUnaryOp(Round, values2, "[320, 3.5, 3.05, 4.5, -3.2, -35, -3.05]");
-    } else if (round_multiple == 0.1) {
-      this->AssertUnaryOp(Round, values2, values2);
-    } else if (round_multiple == 0) {
+    } else if (round_multiple == 0.1F) {
+      this->AssertUnaryOp(Round, values2, "[320, 3.5, 3.1, 4.5, -3.2, -35, -3.1]");
+    } else if (round_multiple == 0.0F) {
       this->AssertUnaryOp(Round, values2, "[0, 0, 0, 0, 0, 0, 0]");
-    } else if (round_multiple == 10) {
+    } else if (round_multiple == 10.0F) {
       this->AssertUnaryOp(Round, values2, "[320, 0, 0, 0, 0, -40, 0]");
-    } else if (round_multiple == 100) {
+    } else if (round_multiple == 100.0F) {
       this->AssertUnaryOp(Round, values2, "[300, 0, 0, 0, 0, 0, 0]");
     }
   }
