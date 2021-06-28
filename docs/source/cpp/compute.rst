@@ -432,55 +432,56 @@ These functions displace numeric input(s) to approximate and shorter numeric
 representation(s).  Integral input(s) produce floating-point output(s) of same value.
 If any of the input element(s) is null, the corresponding output element is null.
 
-+---------------+------------+-------------+-------------+----------------------------------+
-| Function name | Arity      | Input types | Output type | Notes | Options class            |
-+===============+============+=============+=============+==================================+
-| mround        | Unary      | Numeric     | Float32/64  | (1)(2) | :struct:`MRoundOptions` |
-+---------------+------------+-------------+-------------+----------------------------------+
-| round         | Unary      | Numeric     | Float32/64  | (1)(3) | :struct:`RoundOptions`  |
-+---------------+------------+-------------+-------------+----------------------------------+
++---------------+------------+-------------+-------------+-------------------------+--------+
+| Function name | Arity      | Input types | Output type | Options class           | Notes  |
++===============+============+=============+=============+=========================+========+
+| mround        | Unary      | Numeric     | Float32/64  | :struct:`MRoundOptions` | (1)(2) |
++---------------+------------+-------------+-------------+-------------------------+--------+
+| round         | Unary      | Numeric     | Float32/64  | :struct:`RoundOptions`  | (1)(3) |
++---------------+------------+-------------+-------------+-------------------------+--------+
 
 * \(1) Output value is a 64-bit floating-point for integral inputs and the
   retains the same type for floating-point inputs.  By default rounding functions
   displace a value to the nearest integer with a round to even for breaking ties.
   Options are available to control the rounding behavior.
 * \(2) The ``multiple`` option specifies the rounding
-  scale and precision.  Only the magnitude of the ``rounding multiple`` is used,
-  its sign is ignored.
+  scale and precision.  Only the absolute value of the ``rounding multiple`` is
+  used, that is, its sign is ignored.
 * \(3) The ``ndigits`` option specifies the rounding precision in
   terms of number of digits.  A negative value corresponds to digits in the
-  non-decimal part.
+  non-fractional part. For example, -2 corresponds to rounding to the nearest
+  multiple of 100 (zeroing the ones and tens digits).
 
 +-------------------------+---------------------------------+
 | Round mode              | Description/Examples            |
 +=========================+=================================+
 | DOWNWARD                | Equivalent to ``floor(x)``      |
-| TOWARDS_NEG_INFINITY    | 3.7 = 3, -3.2 = -4              |
+| TOWARDS_NEG_INFINITY    | 3.7 -> 3, -3.2 -> -4            |
 +-------------------------+---------------------------------+
 | UPWARD                  | Equivalent to ``ceil(x)``       |
-| TOWARDS_POS_INFINITY    | 3.2 = 4, -3.7 = -3              |
+| TOWARDS_POS_INFINITY    | 3.2 -> 4, -3.7 -> -3            |
 +-------------------------+---------------------------------+
 | TOWARDS_ZERO            | Equivalent to ``trunc(x)``      |
-| AWAY_FROM_INFINITY      | 3.7 = 3, -3.7 = -3              |
+| AWAY_FROM_INFINITY      | 3.7 -> 3, -3.7 -> -3            |
 +-------------------------+---------------------------------+
-| TOWARDS_INFINITY        | 3.2 = 4, -3.2 = -4              |
+| TOWARDS_INFINITY        | 3.2 -> 4, -3.2 -> -4            |
 | AWAY_FROM_ZERO          |                                 |
 +-------------------------+---------------------------------+
-| HALF_UP                 | 3.5 = 4, 4.5 = 5, -3.5 = -3     |
+| HALF_UP                 | 3.5 -> 4, 4.5 -> 5, -3.5 -> -3  |
 | HALF_POS_INFINITY       |                                 |
 +-------------------------+---------------------------------+
-| HALF_DOWN               | 3.5 = 3, 4.5 = 4, -3.5 = -4     |
+| HALF_DOWN               | 3.5 -> 3, 4.5 -> 4, -3.5 -> -4  |
 | HALF_NEG_INFINITY       |                                 |
 +-------------------------+---------------------------------+
-| HALF_TO_EVEN            | 3.5 = 4, 4.5 = 4, -3.5 = -4     |
+| HALF_TO_EVEN            | 3.5 -> 4, 4.5 -> 4, -3.5 -> -4  |
 +-------------------------+---------------------------------+
-| HALF_TO_ODD             | 3.5 = 3, 4.5 = 5, -3.5 = -3     |
+| HALF_TO_ODD             | 3.5 -> 3, 4.5 -> 5, -3.5 -> -3  |
 +-------------------------+---------------------------------+
-| HALF_TOWARDS_ZERO       | 3.5 = 3, 4.5 = 4, -3.5 = -3     |
+| HALF_TOWARDS_ZERO       | 3.5 -> 3, 4.5 -> 4, -3.5 -> -3  |
 | HALF_AWAY_FROM_INFINITY |                                 |
 +-------------------------+---------------------------------+
 | HALF_TOWARDS_INFINITY   | Round nearest integer           |
-| HALF_AWAY_FROM_ZERO     | 3.5 = 4, 4.5 = 5, -3.5 = -4     |
+| HALF_AWAY_FROM_ZERO     | 3.5 -> 4, 4.5 -> 5, -3.5 -> -4  |
 | NEAREST                 |                                 |
 +-------------------------+---------------------------------+
 
@@ -658,34 +659,33 @@ The third set of functions examines string elements on a byte-per-byte basis:
 String transforms
 ~~~~~~~~~~~~~~~~~
 
-+-------------------------+-------+------------------------+------------------------+-----------------------------------+-------+
-| Function name           | Arity | Input types            | Output type            | Options class                     | Notes |
-+=========================+=======+========================+========================+===================================+=======+
-| ascii_lower             | Unary | String-like            | String-like            |                                   | \(1)  |
-+-------------------------+-------+------------------------+------------------------+-----------------------------------+-------+
-| ascii_reverse           | Unary | String-like            | String-like            |                                   | \(2)  |
-+-------------------------+-------+------------------------+------------------------+-----------------------------------+-------+
-| ascii_upper             | Unary | String-like            | String-like            |                                   | \(1)  |
-+-------------------------+-------+------------------------+------------------------+-----------------------------------+-------+
-| binary_length           | Unary | Binary- or String-like | Int32 or Int64         |                                   | \(3)  |
-+-------------------------+-------+------------------------+------------------------+-----------------------------------+-------+
-| binary_replace_slice    | Unary | String-like            | Binary- or String-like | :struct:`ReplaceSliceOptions`     | \(4)  |
-+-------------------------+-------+------------------------+------------------------+-----------------------------------+-------+
-| replace_substring       | Unary | String-like            | String-like            | :struct:`ReplaceSubstringOptions` | \(5)  |
-+-------------------------+-------+------------------------+------------------------+-----------------------------------+-------+
-| replace_substring_regex | Unary | String-like            | String-like            | :struct:`ReplaceSubstringOptions` | \(6)  |
-+-------------------------+-------+------------------------+------------------------+-----------------------------------+-------+
-| utf8_length             | Unary | String-like            | Int32 or Int64         |                                   | \(7)  |
-+-------------------------+-------+------------------------+------------------------+-----------------------------------+-------+
-| utf8_lower              | Unary | String-like            | String-like            |                                   | \(8)  |
-+-------------------------+-------+------------------------+------------------------+-----------------------------------+-------+
-| utf8_replace_slice      | Unary | String-like            | String-like            | :struct:`ReplaceSliceOptions`     | \(4)  |
-+-------------------------+-------+------------------------+------------------------+-----------------------------------+-------+
-| utf8_reverse            | Unary | String-like            | String-like            |                                   | \(9)  |
-+-------------------------+-------+------------------------+------------------------+-----------------------------------+-------+
-| utf8_upper              | Unary | String-like            | String-like            |                                   | \(8)  |
-+-------------------------+-------+------------------------+------------------------+-----------------------------------+-------+
-
++--------------------------+------------+-------------------------+------------------------+---------+---------------------------------------+
+| Function name            | Arity      | Input types             | Output type            | Notes   | Options class                         |
++==========================+============+=========================+========================+=========+=======================================+
+| ascii_lower              | Unary      | String-like             | String-like            | \(1)    |                                       |
++--------------------------+------------+-------------------------+------------------------+---------+---------------------------------------+
+| ascii_reverse            | Unary      | String-like             | String-like            | \(2)    |                                       |
++--------------------------+------------+-------------------------+------------------------+---------+---------------------------------------+
+| ascii_upper              | Unary      | String-like             | String-like            | \(1)    |                                       |
++--------------------------+------------+-------------------------+------------------------+---------+---------------------------------------+
+| binary_length            | Unary      | Binary- or String-like  | Int32 or Int64         | \(3)    |                                       |
++--------------------------+------------+-------------------------+------------------------+---------+---------------------------------------+
+| binary_replace_slice     | Unary      | String-like             | Binary- or String-like | \(4)    | :struct:`ReplaceSliceOptions`         |
++--------------------------+------------+-------------------------+------------------------+---------+---------------------------------------+
+| replace_substring        | Unary      | String-like             | String-like            | \(5)    | :struct:`ReplaceSubstringOptions`     |
++--------------------------+------------+-------------------------+------------------------+---------+---------------------------------------+
+| replace_substring_regex  | Unary      | String-like             | String-like            | \(6)    | :struct:`ReplaceSubstringOptions`     |
++--------------------------+------------+-------------------------+------------------------+---------+---------------------------------------+
+| utf8_length              | Unary      | String-like             | Int32 or Int64         | \(7)    |                                       |
++--------------------------+------------+-------------------------+------------------------+---------+---------------------------------------+
+| utf8_lower               | Unary      | String-like             | String-like            | \(8)    |                                       |
++--------------------------+------------+-------------------------+------------------------+---------+---------------------------------------+
+| utf8_replace_slice       | Unary      | String-like             | String-like            | \(4)    | :struct:`ReplaceSliceOptions`         |
++--------------------------+------------+-------------------------+------------------------+---------+---------------------------------------+
+| utf8_reverse             | Unary      | String-like             | String-like            | \(9)    |                                       |
++--------------------------+------------+-------------------------+------------------------+---------+---------------------------------------+
+| utf8_upper               | Unary      | String-like             | String-like            | \(8)    |                                       |
++--------------------------+------------+-------------------------+------------------------+---------+---------------------------------------+
 
 * \(1) Each ASCII character in the input is converted to lowercase or
   uppercase.  Non-ASCII characters are left untouched.
