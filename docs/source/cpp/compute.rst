@@ -435,16 +435,17 @@ If any of the input element(s) is null, the corresponding output element is null
 +--------------------------+------------+--------------------+---------------------+--------------------------------+
 | Function name            | Arity      | Input types        | Output type         | Notes | Options class          |
 +==========================+============+====================+=====================+================================+
-| round                    | Unary      | Numeric            | Float32/64          | (1)   | :struct:`RoundOptions` |
+| mround                    | Unary      | Numeric            | Float32/64          | (1)   | :struct:`MRoundOptions` |
 +--------------------------+------------+--------------------+---------------------+--------------------------------+
 
-* \(1) Output value is a 64-bit floating-point for integral inputs and the retains
-  the same type for floating-point inputs.  By default ``round`` displaces a value
-  to the nearest integer.  Options are available to control the rounding behavior.
-  The ``rounding mode`` option specifies displacement direction and tie-breaking
-  rules for half-way values.  The ``rounding multiple`` option specifies the
-  resulting scale and precision. Only the magnitude of the ``rounding multiple``
-  is used, its sign is ignored.
+* \(1) Output value is a 64-bit floating-point for integral inputs and the
+  retains the same type for floating-point inputs.  By default ``mround``
+  displaces a value to the nearest integer with a round to even for breaking
+  ties.  Options are available to control the rounding behavior.  The ``rounding
+  mode`` option specifies displacement direction and tie-breaking rules for
+  half-way values.  The ``rounding multiple`` option specifies the resulting
+  scale and precision. Only the magnitude of the ``rounding multiple`` is used,
+  its sign is ignored.
 
 +-------------------------+---------------------------------+
 | Round mode              | Description/Examples            |

@@ -52,42 +52,55 @@ class ARROW_EXPORT ElementWiseAggregateOptions : public FunctionOptions {
   bool skip_nulls;
 };
 
+enum class RoundMode {
+  // floor (towards negative infinity)
+  DOWNWARD,
+  TOWARDS_NEG_INFINITY,
+  // ceiling (towards positive infinity)
+  UPWARD,
+  TOWARDS_POS_INFINITY,
+  // truncate
+  TOWARDS_ZERO,
+  AWAY_FROM_INFINITY,
+  // towards +-infinity (away from zero)
+  TOWARDS_INFINITY,
+  AWAY_FROM_ZERO,
+  // Tie-breakers
+  // half down (half towards negative infinity)
+  HALF_DOWN,
+  // half up (half towards positive infinity)
+  HALF_UP,
+  // half to even
+  HALF_TO_EVEN,
+  // half to odd
+  HALF_TO_ODD,
+  // half towards zero
+  HALF_TOWARDS_ZERO,
+  HALF_AWAY_FROM_INFINITY,
+  // half towards infinity (half away from zero = nearest)
+  HALF_TOWARDS_INFINITY,
+  HALF_AWAY_FROM_ZERO,
+  NEAREST,
+};
+
 class ARROW_EXPORT RoundOptions : public FunctionOptions {
  public:
-  enum RoundMode {
-    // floor (towards negative infinity)
-    DOWNWARD,
-    TOWARDS_NEG_INFINITY,
-    // ceiling (towards positive infinity)
-    UPWARD,
-    TOWARDS_POS_INFINITY,
-    // truncate
-    TOWARDS_ZERO,
-    AWAY_FROM_INFINITY,
-    // towards +-infinity (away from zero)
-    TOWARDS_INFINITY,
-    AWAY_FROM_ZERO,
-    // Tie-breakers
-    // half down (half towards negative infinity)
-    HALF_DOWN,
-    // half up (half towards positive infinity)
-    HALF_UP,
-    // half to even
-    HALF_TO_EVEN,
-    // half to odd
-    HALF_TO_ODD,
-    // half towards zero
-    HALF_TOWARDS_ZERO,
-    HALF_AWAY_FROM_INFINITY,
-    // half towards infinity (half away from zero = nearest)
-    HALF_TOWARDS_INFINITY,
-    HALF_AWAY_FROM_ZERO,
-    NEAREST,
-  };
-  explicit RoundOptions(float multiple = 1, RoundMode round_mode = NEAREST)
-      : multiple(multiple), round_mode(round_mode) {}
+  explicit RoundOptions(int32_t ndigits = 1,
+                        RoundMode round_mode = RoundMode::HALF_TO_EVEN)
+      : ndigits(ndigits), round_mode(round_mode) {}
   constexpr static char const kTypeName[] = "RoundOptions";
   static RoundOptions Defaults() { return RoundOptions(); }
+  int32_t ndigits;
+  RoundMode round_mode;
+};
+
+class ARROW_EXPORT MRoundOptions : public FunctionOptions {
+ public:
+  explicit MRoundOptions(float multiple = 1.0F,
+                         RoundMode round_mode = RoundMode::HALF_TO_EVEN)
+      : multiple(multiple), round_mode(round_mode) {}
+  constexpr static char const kTypeName[] = "MRoundOptions";
+  static MRoundOptions Defaults() { return MRoundOptions(); }
   float multiple;
   RoundMode round_mode;
 };
@@ -596,8 +609,8 @@ Result<Datum> Sign(const Datum& arg, ExecContext* ctx = NULLPTR);
 /// \param[in] ctx the function execution context, optional
 /// \return the element-wise rounded value
 ARROW_EXPORT
-Result<Datum> Round(const Datum& arg, RoundOptions options = RoundOptions::Defaults(),
-                    ExecContext* ctx = NULLPTR);
+Result<Datum> MRound(const Datum& arg, MRoundOptions options = MRoundOptions::Defaults(),
+                     ExecContext* ctx = NULLPTR);
 
 /// \brief Compare a numeric array with a scalar.
 ///

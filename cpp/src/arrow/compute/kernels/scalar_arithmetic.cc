@@ -465,6 +465,7 @@ struct PowerChecked {
   }
 };
 
+<<<<<<< 0c6cf95ab68980223432e36d4aeb03b89989a889
 struct Sign {
   template <typename T, typename Arg>
   static constexpr enable_if_floating_point<T> Call(KernelContext*, Arg arg, Status*) {
@@ -839,9 +840,7 @@ struct Trunc {
   }
 };
 
-using RoundState = internal::OptionsWrapper<RoundOptions>;
-
-struct Round {
+struct RoundUtils {
   template <typename T, enable_if_t<std::is_floating_point<T>::value, bool> = true>
   static bool ApproxEqual(const T x, const T y, const int ulp = 7) {
     // https://en.cppreference.com/w/cpp/types/numeric_limits/epsilon
@@ -896,7 +895,7 @@ struct Round {
     if (IsHalf(val)) {
       auto floor = std::floor(val);
       // Odd + 1, Even + 0
-      return floor + (std::fmod(std::fabs(floor), 2) >= 1);
+      return floor + (std::fmod(std::fabs(floor), T(2)) >= T(1));
     }
     return std::round(val);
   }
@@ -906,7 +905,7 @@ struct Round {
     if (IsHalf(val)) {
       auto floor = std::floor(val);
       // Odd + 0, Even + 1
-      return floor + (std::fmod(std::fabs(floor), 2) < 1);
+      return floor + (std::fmod(std::fabs(floor), T(2)) < T(1));
     }
     return std::round(val);
   }
@@ -921,67 +920,83 @@ struct Round {
     return std::copysign(std::ceil(std::fabs(val) - T(0.5)), val);
   }
 
+  template <typename T>
+  static enable_if_floating_point<T> Round(T val, T mult, RoundMode round_mode,
+                                           Status* st) {
+    val /= mult;
+
+    T result;
+    switch (round_mode) {
+      case RoundMode::DOWNWARD:
+      case RoundMode::TOWARDS_NEG_INFINITY:
+        result = Floor(val);
+        break;
+      case RoundMode::UPWARD:
+      case RoundMode::TOWARDS_POS_INFINITY:
+        result = Ceiling(val);
+        break;
+      case RoundMode::TOWARDS_ZERO:
+      case RoundMode::AWAY_FROM_INFINITY:
+        result = Truncate(val);
+        break;
+      case RoundMode::TOWARDS_INFINITY:
+      case RoundMode::AWAY_FROM_ZERO:
+        result = TowardsInfinity(val);
+        break;
+      case RoundMode::HALF_UP:
+        result = HalfUp(val);
+        break;
+      case RoundMode::HALF_DOWN:
+        result = HalfDown(val);
+        break;
+      case RoundMode::HALF_TO_EVEN:
+        result = HalfToEven(val);
+        break;
+      case RoundMode::HALF_TO_ODD:
+        result = HalfToOdd(val);
+        break;
+      case RoundMode::HALF_TOWARDS_ZERO:
+      case RoundMode::HALF_AWAY_FROM_INFINITY:
+        result = HalfTowardsZero(val);
+        break;
+      case RoundMode::HALF_TOWARDS_INFINITY:
+      case RoundMode::HALF_AWAY_FROM_ZERO:
+      case RoundMode::NEAREST:
+        result = Nearest(val);
+        break;
+      default:
+        *st = Status::Invalid("invalid rounding mode");
+        return val;
+    }
+
+    return result * mult;
+  }
+};
+
+struct MRound {
+  template <typename T, typename Arg,
+            enable_if_t<std::is_arithmetic<Arg>::value, bool> = true>
+  static enable_if_floating_point<T> Call(KernelContext* ctx, Arg arg, Status* st) {
+    auto options = OptionsWrapper<MRoundOptions>::Get(ctx);
+    const T mult = std::fabs(options.multiple);
+    if (mult == T(0)) {
+      return T(0);
+    }
+
+    // Cast input based on output type
+    return RoundUtils::Round(T(arg), mult, options.round_mode, st);
+  }
+};
+
+struct Round {
   template <typename T, typename Arg,
             enable_if_t<std::is_arithmetic<Arg>::value, bool> = true>
   static enable_if_floating_point<T> Call(KernelContext* ctx, Arg arg, Status* st) {
     auto options = OptionsWrapper<RoundOptions>::Get(ctx);
-
-    T mult = std::fabs(options.multiple);
-    if (mult == 0) {
-      return mult;
-    }
+    const T mult = std::pow(T(10), T(-options.ndigits));
 
     // Cast input based on output type
-    T arg_ = arg / mult;
-
-    T result;
-    switch (options.round_mode) {
-      case RoundOptions::DOWNWARD:
-      case RoundOptions::TOWARDS_NEG_INFINITY:
-        result = Floor(arg_);
-        // result = Floor::Call(ctx, arg_, st);
-        break;
-      case RoundOptions::UPWARD:
-      case RoundOptions::TOWARDS_POS_INFINITY:
-        result = Ceiling(arg_);
-        // result = Ceiling::Call(ctx, arg_, st);
-        break;
-      case RoundOptions::TOWARDS_ZERO:
-      case RoundOptions::AWAY_FROM_INFINITY:
-        result = Truncate(arg_);
-        // result = Truncate::Call(ctx, arg_, st);
-        break;
-      case RoundOptions::TOWARDS_INFINITY:
-      case RoundOptions::AWAY_FROM_ZERO:
-        result = TowardsInfinity(arg_);
-        break;
-      case RoundOptions::HALF_UP:
-        result = HalfUp(arg_);
-        break;
-      case RoundOptions::HALF_DOWN:
-        result = HalfDown(arg_);
-        break;
-      case RoundOptions::HALF_TO_EVEN:
-        result = HalfToEven(arg_);
-        break;
-      case RoundOptions::HALF_TO_ODD:
-        result = HalfToOdd(arg_);
-        break;
-      case RoundOptions::HALF_TOWARDS_ZERO:
-      case RoundOptions::HALF_AWAY_FROM_INFINITY:
-        result = HalfTowardsZero(arg_);
-        break;
-      case RoundOptions::HALF_TOWARDS_INFINITY:
-      case RoundOptions::HALF_AWAY_FROM_ZERO:
-      case RoundOptions::NEAREST:
-        result = Nearest(arg_);
-        break;
-      default:
-        *st = Status::Invalid("invalid rounding mode");
-        return arg_;
-    }
-
-    return result * mult;
+    return RoundUtils::Round(T(arg), mult, options.round_mode, st);
   }
 };
 
@@ -1598,6 +1613,7 @@ const FunctionDoc pow_checked_doc{
      "or integer overflow is encountered."),
     {"base", "exponent"}};
 
+<<<<<<< 0c6cf95ab68980223432e36d4aeb03b89989a889
 const FunctionDoc sign_doc{
     "Get the signedness of the arguments element-wise",
     ("Output is any of (-1,1) for nonzero inputs and 0 for zero input.\n"
@@ -1803,10 +1819,17 @@ const FunctionDoc trunc_doc{
 
 const FunctionDoc round_doc{
     "Round the arguments element-wise",
-    ("Options are used to control the rounding mode and rounding multiple.\n"
+    ("Options are used to control the rounding mode and number of digits.\n"
      "Default behavior is to round to nearest integer."),
     {"x"},
     "RoundOptions"};
+
+const FunctionDoc mround_doc{
+    "Round the arguments element-wise",
+    ("Options are used to control the rounding mode and rounding multiple.\n"
+     "Default behavior is to round to nearest integer."),
+    {"x"},
+    "MRoundOptions"};
 }  // namespace
 
 void RegisterScalarArithmetic(FunctionRegistry* registry) {
@@ -1891,6 +1914,7 @@ void RegisterScalarArithmetic(FunctionRegistry* registry) {
   DCHECK_OK(registry->AddFunction(std::move(power_checked)));
 
   // ----------------------------------------------------------------------
+<<<<<<< 0c6cf95ab68980223432e36d4aeb03b89989a889
   auto sign =
       MakeUnaryArithmeticFunctionWithFixedIntOutType<Sign, Int8Type>("sign", &sign_doc);
   DCHECK_OK(registry->AddFunction(std::move(sign)));
@@ -2022,6 +2046,11 @@ void RegisterScalarArithmetic(FunctionRegistry* registry) {
   auto round = MakeUnaryArithmeticFunctionWithFloatOutType<Round>(
       "round", &round_doc, &kRoundOptions, OptionsWrapper<RoundOptions>::Init);
   DCHECK_OK(registry->AddFunction(std::move(round)));
+
+  static auto kMRoundOptions = MRoundOptions::Defaults();
+  auto mround = MakeUnaryArithmeticFunctionWithFloatOutType<MRound>(
+      "mround", &mround_doc, &kMRoundOptions, OptionsWrapper<MRoundOptions>::Init);
+  DCHECK_OK(registry->AddFunction(std::move(mround)));
 }
 
 }  // namespace internal

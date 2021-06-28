@@ -335,8 +335,8 @@ SCALAR_ARITHMETIC_UNARY(Log10, "log10", "log10_checked")
 SCALAR_ARITHMETIC_UNARY(Log2, "log2", "log2_checked")
 SCALAR_ARITHMETIC_UNARY(Log1p, "log1p", "log1p_checked")
 
-Result<Datum> Round(const Datum& arg, RoundOptions options, ExecContext* ctx) {
-  return CallFunction("round", {arg}, &options, ctx);
+Result<Datum> MRound(const Datum& arg, MRoundOptions options, ExecContext* ctx) {
+  return CallFunction("mround", {arg}, &options, ctx);
 }
 
 #define SCALAR_ARITHMETIC_BINARY(NAME, REGISTRY_NAME, REGISTRY_CHECKED_NAME)           \
