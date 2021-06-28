@@ -491,7 +491,7 @@ If any of the input element(s) is null, the corresponding output element is null
 +----------------+--------------------------------------------+
 | 0.001          | 3             | Round to 3 decimal places  |
 +----------------+--------------------------------------------+
-| 10             | -2            | Round to multiple of 10    |
+| 10             | -1            | Round to multiple of 10    |
 +----------------+--------------------------------------------+
 | 2              |               | Round to multiple of 2     |
 +----------------+--------------------------------------------+
