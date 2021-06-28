@@ -58,46 +58,37 @@ class ARROW_EXPORT RoundOptions : public FunctionOptions {
     // floor (towards negative infinity)
     DOWNWARD,
     TOWARDS_NEG_INFINITY,
-
     // ceiling (towards positive infinity)
     UPWARD,
     TOWARDS_POS_INFINITY,
-
     // truncate
     TOWARDS_ZERO,
     AWAY_FROM_INFINITY,
-
     // towards +-infinity (away from zero)
     TOWARDS_INFINITY,
     AWAY_FROM_ZERO,
-
     // Tie-breakers
     // half down (half towards negative infinity)
     HALF_DOWN,
-
     // half up (half towards positive infinity)
     HALF_UP,
-
     // half to even
     HALF_TO_EVEN,
-
     // half to odd
     HALF_TO_ODD,
-
     // half towards zero
     HALF_TOWARDS_ZERO,
     HALF_AWAY_FROM_INFINITY,
-
     // half towards infinity (half away from zero = nearest)
     HALF_TOWARDS_INFINITY,
     HALF_AWAY_FROM_ZERO,
     NEAREST,
   };
-  explicit RoundOptions(double multiple = 1., RoundMode round_mode = NEAREST)
+  explicit RoundOptions(float multiple = 1, RoundMode round_mode = NEAREST)
       : multiple(multiple), round_mode(round_mode) {}
   constexpr static char const kTypeName[] = "RoundOptions";
   static RoundOptions Defaults() { return RoundOptions(); }
-  double multiple;
+  float multiple;
   RoundMode round_mode;
 };
 

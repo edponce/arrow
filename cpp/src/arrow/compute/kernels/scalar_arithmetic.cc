@@ -843,25 +843,22 @@ using RoundState = internal::OptionsWrapper<RoundOptions>;
 
 struct Round {
   template <typename T, enable_if_t<std::is_floating_point<T>::value, bool> = true>
-  static constexpr bool ApproxEqual(T x, T y, int ulp = 8) {
+  static bool ApproxEqual(const T x, const T y, const int ulp = 7) {
     // https://en.cppreference.com/w/cpp/types/numeric_limits/epsilon
     // The machine epsilon has to be scaled to the magnitude of the values used
     // and multiplied by the desired precision in ULPs (units in the last place)
-    return (std::fabs(x - y) <=
-            (std::numeric_limits<T>::epsilon() * std::fabs(x + y) * ulp))
+    const auto eps_ulp = std::numeric_limits<T>::epsilon() * ulp;
+    const auto xy_diff = std::fabs(x - y);
+    const auto xy_sum = std::fabs(x + y);
+    return (xy_diff <= (xy_sum * eps_ulp))
            // unless the result is subnormal
-           || (std::fabs(x - y) < std::numeric_limits<T>::min());
+           || (xy_diff < std::numeric_limits<T>::min());
   }
 
   template <typename T, enable_if_t<std::is_floating_point<T>::value, bool> = true>
-  static constexpr bool IsHalf(T val) {
+  static bool IsHalf(T val) {
     // |frac| == 0.5?
     return ApproxEqual(std::fabs(std::fmod(val, T(1))), T(0.5));
-  }
-
-  template <typename T>
-  static constexpr enable_if_floating_point<T> RoundWithMultiple(T val, T mult) {
-    return (val / mult) * mult;
   }
 
   template <typename T>
@@ -899,7 +896,7 @@ struct Round {
     if (IsHalf(val)) {
       auto floor = std::floor(val);
       // Odd + 1, Even + 0
-      return floor + (std::fmod(std::fabs(floor), T(2)) >= T(1));
+      return floor + (std::fmod(std::fabs(floor), 2) >= 1);
     }
     return std::round(val);
   }
@@ -909,7 +906,7 @@ struct Round {
     if (IsHalf(val)) {
       auto floor = std::floor(val);
       // Odd + 0, Even + 1
-      return floor + (std::fmod(std::fabs(floor), T(2)) < T(1));
+      return floor + (std::fmod(std::fabs(floor), 2) < 1);
     }
     return std::round(val);
   }
@@ -927,15 +924,15 @@ struct Round {
   template <typename T, typename Arg,
             enable_if_t<std::is_arithmetic<Arg>::value, bool> = true>
   static enable_if_floating_point<T> Call(KernelContext* ctx, Arg arg, Status* st) {
-    auto options = RoundState::Get(ctx);
+    auto options = OptionsWrapper<RoundOptions>::Get(ctx);
 
     T mult = std::fabs(options.multiple);
-    if (mult == T(0)) {
-      return T(0);
+    if (mult == 0) {
+      return mult;
     }
 
     // Cast input based on output type
-    auto arg_ = T(arg);
+    T arg_ = arg / mult;
 
     T result;
     switch (options.round_mode) {
@@ -984,7 +981,7 @@ struct Round {
         return arg_;
     }
 
-    return (mult == T(1)) ? result : RoundWithMultiple(result, mult);
+    return result * mult;
   }
 };
 
@@ -2023,7 +2020,7 @@ void RegisterScalarArithmetic(FunctionRegistry* registry) {
 
   static auto kRoundOptions = RoundOptions::Defaults();
   auto round = MakeUnaryArithmeticFunctionWithFloatOutType<Round>(
-      "round", &round_doc, &kRoundOptions, RoundState::Init);
+      "round", &round_doc, &kRoundOptions, OptionsWrapper<RoundOptions>::Init);
   DCHECK_OK(registry->AddFunction(std::move(round)));
 }
 
