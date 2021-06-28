@@ -465,7 +465,6 @@ struct PowerChecked {
   }
 };
 
-<<<<<<< 0c6cf95ab68980223432e36d4aeb03b89989a889
 struct Sign {
   template <typename T, typename Arg>
   static constexpr enable_if_floating_point<T> Call(KernelContext*, Arg arg, Status*) {
@@ -1613,7 +1612,6 @@ const FunctionDoc pow_checked_doc{
      "or integer overflow is encountered."),
     {"base", "exponent"}};
 
-<<<<<<< 0c6cf95ab68980223432e36d4aeb03b89989a889
 const FunctionDoc sign_doc{
     "Get the signedness of the arguments element-wise",
     ("Output is any of (-1,1) for nonzero inputs and 0 for zero input.\n"
@@ -1829,7 +1827,7 @@ const FunctionDoc mround_doc{
     ("Options are used to control the rounding mode and rounding multiple.\n"
      "Default behavior is to round to nearest integer."),
     {"x"},
-    "MRoundOptions"};
+    "RoundOptions"};
 }  // namespace
 
 void RegisterScalarArithmetic(FunctionRegistry* registry) {
@@ -1914,7 +1912,6 @@ void RegisterScalarArithmetic(FunctionRegistry* registry) {
   DCHECK_OK(registry->AddFunction(std::move(power_checked)));
 
   // ----------------------------------------------------------------------
-<<<<<<< 0c6cf95ab68980223432e36d4aeb03b89989a889
   auto sign =
       MakeUnaryArithmeticFunctionWithFixedIntOutType<Sign, Int8Type>("sign", &sign_doc);
   DCHECK_OK(registry->AddFunction(std::move(sign)));

@@ -136,6 +136,7 @@ floating-point representation. If one of the inputs is `null` they return ``null
 .. autosummary::
    :toctree: ../generated/
 
+   mround
    round
 
 Comparisons

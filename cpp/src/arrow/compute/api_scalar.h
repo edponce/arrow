@@ -601,7 +601,18 @@ Result<Datum> MinElementWise(
 ARROW_EXPORT
 Result<Datum> Sign(const Datum& arg, ExecContext* ctx = NULLPTR);
 
-/// \brief Round a value to a given multiple. Array values can be of arbitrary
+/// \brief Round a value to the given number of digits. Array values can be of
+/// arbitrary length. If argument is null the result will be null.
+///
+/// \param[in] arg the value rounded
+/// \param[in] options rounding options (rounding mode and number of digits), optional
+/// \param[in] ctx the function execution context, optional
+/// \return the element-wise rounded value
+ARROW_EXPORT
+Result<Datum> Round(const Datum& arg, RoundOptions options = RoundOptions::Defaults(),
+                    ExecContext* ctx = NULLPTR);
+
+/// \brief Round a value to the given multiple. Array values can be of arbitrary
 /// length. If argument is null the result will be null.
 ///
 /// \param[in] arg the value to round

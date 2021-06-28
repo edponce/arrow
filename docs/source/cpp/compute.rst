@@ -432,20 +432,24 @@ These functions displace numeric input(s) to approximate and shorter numeric
 representation(s).  Integral input(s) produce floating-point output(s) of same value.
 If any of the input element(s) is null, the corresponding output element is null.
 
-+--------------------------+------------+--------------------+---------------------+--------------------------------+
-| Function name            | Arity      | Input types        | Output type         | Notes | Options class          |
-+==========================+============+====================+=====================+================================+
-| mround                    | Unary      | Numeric            | Float32/64          | (1)   | :struct:`MRoundOptions` |
-+--------------------------+------------+--------------------+---------------------+--------------------------------+
++---------------+------------+-------------+-------------+----------------------------------+
+| Function name | Arity      | Input types | Output type | Notes | Options class            |
++===============+============+=============+=============+==================================+
+| mround        | Unary      | Numeric     | Float32/64  | (1)(2) | :struct:`MRoundOptions` |
++---------------+------------+-------------+-------------+----------------------------------+
+| round         | Unary      | Numeric     | Float32/64  | (1)(3) | :struct:`RoundOptions`  |
++---------------+------------+-------------+-------------+----------------------------------+
 
 * \(1) Output value is a 64-bit floating-point for integral inputs and the
-  retains the same type for floating-point inputs.  By default ``mround``
-  displaces a value to the nearest integer with a round to even for breaking
-  ties.  Options are available to control the rounding behavior.  The ``rounding
-  mode`` option specifies displacement direction and tie-breaking rules for
-  half-way values.  The ``rounding multiple`` option specifies the resulting
-  scale and precision. Only the magnitude of the ``rounding multiple`` is used,
+  retains the same type for floating-point inputs.  By default rounding functions
+  displace a value to the nearest integer with a round to even for breaking ties.
+  Options are available to control the rounding behavior.
+* \(2) The ``multiple`` option specifies the rounding
+  scale and precision.  Only the magnitude of the ``rounding multiple`` is used,
   its sign is ignored.
+* \(3) The ``ndigits`` option specifies the rounding precision in
+  terms of number of digits.  A negative value corresponds to digits in the
+  non-decimal part.
 
 +-------------------------+---------------------------------+
 | Round mode              | Description/Examples            |
@@ -475,24 +479,24 @@ If any of the input element(s) is null, the corresponding output element is null
 | HALF_TOWARDS_ZERO       | 3.5 = 3, 4.5 = 4, -3.5 = -3     |
 | HALF_AWAY_FROM_INFINITY |                                 |
 +-------------------------+---------------------------------+
-| HALF_TOWARDS_INFINITY   | Round nearest integer (default) |
+| HALF_TOWARDS_INFINITY   | Round nearest integer           |
 | HALF_AWAY_FROM_ZERO     | 3.5 = 4, 4.5 = 5, -3.5 = -4     |
 | NEAREST                 |                                 |
 +-------------------------+---------------------------------+
 
-+----------------+----------------------------+
-| Round multiple | Description                |
-+=========================+===================+
-| 1.0            | Round to integer (default) |
-+----------------+----------------------------+
-| 0.001          | Round to 3 decimal places  |
-+----------------+----------------------------+
-| 10             | Round to multiple of 10    |
-+----------------+----------------------------+
-| 2              | Round to multiple of 2     |
-+----------------+----------------------------+
-| 0              | Returns 0                  |
-+----------------+----------------------------+
++----------------+---------------+----------------------------+
+| Round multiple | Round ndigits | Description                |
++================================+============================+
+| 1.0            | 0             | Round to integer           |
++----------------+--------------------------------------------+
+| 0.001          | 3             | Round to 3 decimal places  |
++----------------+--------------------------------------------+
+| 10             | -2            | Round to multiple of 10    |
++----------------+--------------------------------------------+
+| 2              |               | Round to multiple of 2     |
++----------------+--------------------------------------------+
+| 0              |               | Returns 0                  |
++----------------+--------------------------------------------+
 
 Comparisons
 ~~~~~~~~~~~

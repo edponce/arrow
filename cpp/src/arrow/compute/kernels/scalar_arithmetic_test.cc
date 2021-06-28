@@ -208,6 +208,28 @@ template <typename T>
 class TestUnaryMRoundFloating : public TestUnaryArithmetic<T, MRoundOptions> {};
 
 template <typename T>
+class TestUnaryArithmetic<T, RoundOptions>
+    : public TestBaseUnaryArithmetic<T, RoundOptions> {
+ protected:
+  using Base = TestBaseUnaryArithmetic<T, RoundOptions>;
+  using Base::options_;
+  void SetRoundMode(RoundMode value) { options_.round_mode = value; }
+  void SetRoundNdigits(int32_t value) { options_.ndigits = value; }
+};
+
+template <typename T>
+class TestUnaryRoundIntegral : public TestUnaryArithmetic<T, RoundOptions> {};
+
+template <typename T>
+class TestUnaryRoundSigned : public TestUnaryRoundIntegral<T> {};
+
+template <typename T>
+class TestUnaryRoundUnsigned : public TestUnaryRoundIntegral<T> {};
+
+template <typename T>
+class TestUnaryRoundFloating : public TestUnaryArithmetic<T, RoundOptions> {};
+
+template <typename T>
 class TestBinaryArithmetic : public TestBase {
  protected:
   using ArrowType = T;
@@ -442,6 +464,11 @@ TYPED_TEST_SUITE(TestUnaryMRoundIntegral, IntegralTypes);
 TYPED_TEST_SUITE(TestUnaryMRoundSigned, SignedIntegerTypes);
 TYPED_TEST_SUITE(TestUnaryMRoundUnsigned, UnsignedIntegerTypes);
 TYPED_TEST_SUITE(TestUnaryMRoundFloating, FloatingTypes);
+
+TYPED_TEST_SUITE(TestUnaryRoundIntegral, IntegralTypes);
+TYPED_TEST_SUITE(TestUnaryRoundSigned, SignedIntegerTypes);
+TYPED_TEST_SUITE(TestUnaryRoundUnsigned, UnsignedIntegerTypes);
+TYPED_TEST_SUITE(TestUnaryRoundFloating, FloatingTypes);
 
 TYPED_TEST_SUITE(TestBinaryArithmeticIntegral, IntegralTypes);
 TYPED_TEST_SUITE(TestBinaryArithmeticSigned, SignedIntegerTypes);
@@ -1110,7 +1137,7 @@ TEST(TestUnaryArithmetic, DispatchBest) {
   }
 
   // Fail on null type
-  for (std::string name : {"atan", "sign", "floor", "ceil", "trunc", "round"}) {
+  for (std::string name : {"atan", "sign", "floor", "ceil", "trunc", "round", "mround"}) {
     CheckDispatchFails(name, {null()});
   }
 
@@ -1135,7 +1162,7 @@ TEST(TestUnaryArithmetic, DispatchBest) {
   }
 
   // Float types
-  for (std::string name : {"atan", "sign", "floor", "ceil", "trunc", "round"}) {
+  for (std::string name : {"atan", "sign", "floor", "ceil", "trunc", "round", "mround"}) {
     for (const auto& ty : {float32(), float64()}) {
       CheckDispatchBest(name, {ty}, {ty});
       CheckDispatchBest(name, {dictionary(int8(), ty)}, {ty});
@@ -1370,6 +1397,54 @@ TYPED_TEST(TestUnaryArithmeticFloating, AbsoluteValue) {
     // Min/max
     this->AssertUnaryOp(AbsoluteValue, min, max);
     this->AssertUnaryOp(AbsoluteValue, max, max);
+  }
+}
+
+TYPED_TEST(TestUnaryRoundSigned, Round) {
+  using CType = typename TestFixture::CType;
+  auto min = std::numeric_limits<CType>::min();
+  auto max = std::numeric_limits<CType>::max();
+
+  // Test different rounding modes for rounding multiple of 1
+  RoundMode round_modes[] = {
+      RoundMode::DOWNWARD,         RoundMode::UPWARD,      RoundMode::TOWARDS_ZERO,
+      RoundMode::TOWARDS_INFINITY, RoundMode::HALF_DOWN,   RoundMode::HALF_UP,
+      RoundMode::HALF_TO_EVEN,     RoundMode::HALF_TO_ODD, RoundMode::HALF_TOWARDS_ZERO,
+      RoundMode::NEAREST,
+  };
+  this->SetRoundNdigits(0);
+  std::string values("[0, 1, -13, -50, 115]");
+
+  for (auto round_mode : round_modes) {
+    this->SetRoundMode(round_mode);
+
+    this->options_.round_mode = round_mode;
+    this->AssertUnaryOp(Round, "[]", ArrayFromJSON(float64(), "[]"));
+    this->AssertUnaryOp(Round, "[null]", ArrayFromJSON(float64(), "[null]"));
+    this->AssertUnaryOp(Round, this->MakeScalar(min), *arrow::MakeScalar(float64(), min));
+    this->AssertUnaryOp(Round, this->MakeScalar(max), *arrow::MakeScalar(float64(), max));
+    this->AssertUnaryOp(Round, values, ArrayFromJSON(float64(), values));
+  }
+
+  // Test different round N-digits for NEAREST rounding mode
+  int32_t round_ndigits[] = {-2, -1, 0, 1, 2};
+  this->SetRoundMode(RoundMode::NEAREST);
+
+  for (auto round_ndigit : round_ndigits) {
+    this->SetRoundNdigits(round_ndigit);
+
+    this->AssertUnaryOp(Round, "[]", ArrayFromJSON(float64(), "[]"));
+    this->AssertUnaryOp(Round, "[null]", ArrayFromJSON(float64(), "[null]"));
+
+    if (round_ndigit >= 0) {
+      this->AssertUnaryOp(Round, values, ArrayFromJSON(float64(), values));
+    } else if (round_ndigit == -2) {
+      this->AssertUnaryOp(Round, values,
+                          ArrayFromJSON(float64(), "[0, 0, 0, -100, 100]"));
+    } else if (round_ndigit == -1) {
+      this->AssertUnaryOp(Round, values,
+                          ArrayFromJSON(float64(), "[0, 0, -10, -50, 120]"));
+    }
   }
 }
 
