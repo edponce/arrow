@@ -1407,10 +1407,10 @@ TYPED_TEST(TestUnaryRoundSigned, Round) {
 
   // Test different rounding modes for rounding multiple of 1
   RoundMode round_modes[] = {
-      RoundMode::DOWNWARD,         RoundMode::UPWARD,      RoundMode::TOWARDS_ZERO,
-      RoundMode::TOWARDS_INFINITY, RoundMode::HALF_DOWN,   RoundMode::HALF_UP,
+      RoundMode::TOWARDS_NEG_INFINITY,         RoundMode::TOWARDS_POS_INFINITY,      RoundMode::TOWARDS_ZERO,
+      RoundMode::TOWARDS_INFINITY, RoundMode::HALF_NEG_INFINITY,   RoundMode::HALF_POS_INFINITY,
       RoundMode::HALF_TO_EVEN,     RoundMode::HALF_TO_ODD, RoundMode::HALF_TOWARDS_ZERO,
-      RoundMode::NEAREST,
+      RoundMode::HALF_TOWARDS_INFINITY,
   };
   this->SetRoundNdigits(0);
   std::string values("[0, 1, -13, -50, 115]");
@@ -1455,13 +1455,13 @@ TYPED_TEST(TestUnaryMRoundSigned, MRound) {
 
   // Test different rounding modes for rounding multiple of 1
   RoundMode round_modes[] = {
-      RoundMode::DOWNWARD,         RoundMode::UPWARD,      RoundMode::TOWARDS_ZERO,
-      RoundMode::TOWARDS_INFINITY, RoundMode::HALF_DOWN,   RoundMode::HALF_UP,
+      RoundMode::TOWARDS_NEG_INFINITY,         RoundMode::TOWARDS_POS_INFINITY,      RoundMode::TOWARDS_ZERO,
+      RoundMode::TOWARDS_INFINITY, RoundMode::HALF_NEG_INFINITY,   RoundMode::HALF_POS_INFINITY,
       RoundMode::HALF_TO_EVEN,     RoundMode::HALF_TO_ODD, RoundMode::HALF_TOWARDS_ZERO,
-      RoundMode::NEAREST,
+      RoundMode::HALF_TOWARDS_INFINITY,
   };
   this->SetRoundMultiple(1);
-  std::string values("[0, 1, -13, -50, 125]");
+  std::string values("[0, 1, -13, -50, 115]");
 
   for (auto round_mode : round_modes) {
     this->SetRoundMode(round_mode);
@@ -1488,17 +1488,17 @@ TYPED_TEST(TestUnaryMRoundSigned, MRound) {
 
     if (round_multiple == -2.0F) {
       this->AssertUnaryOp(MRound, values,
-                          ArrayFromJSON(float64(), "[0, 2, -14, -50, 126]"));
+                          ArrayFromJSON(float64(), "[0, 2, -14, -50, 116]"));
     } else if (round_multiple == -0.05F) {
       this->AssertUnaryOp(MRound, values,
-                          ArrayFromJSON(float64(), "[0, 1, -13, -50, 125]"));
+                          ArrayFromJSON(float64(), "[0, 1, -13, -50, 115]"));
     } else if (round_multiple == 0.1F) {
       this->AssertUnaryOp(MRound, values, ArrayFromJSON(float64(), values));
     } else if (round_multiple == 0.0F) {
       this->AssertUnaryOp(MRound, values, ArrayFromJSON(float64(), "[0, 0, 0, 0, 0]"));
     } else if (round_multiple == 10.0F) {
       this->AssertUnaryOp(MRound, values,
-                          ArrayFromJSON(float64(), "[0, 0, -10, -50, 130]"));
+                          ArrayFromJSON(float64(), "[0, 0, -10, -50, 120]"));
     } else if (round_multiple == 100.0F) {
       this->AssertUnaryOp(MRound, values,
                           ArrayFromJSON(float64(), "[0, 0, 0, -100, 100]"));
@@ -1513,13 +1513,13 @@ TYPED_TEST(TestUnaryMRoundUnsigned, MRound) {
 
   // Test different rounding modes for rounding multiple of 1
   RoundMode round_modes[] = {
-      RoundMode::DOWNWARD,         RoundMode::UPWARD,      RoundMode::TOWARDS_ZERO,
-      RoundMode::TOWARDS_INFINITY, RoundMode::HALF_DOWN,   RoundMode::HALF_UP,
+      RoundMode::TOWARDS_NEG_INFINITY,         RoundMode::TOWARDS_POS_INFINITY,      RoundMode::TOWARDS_ZERO,
+      RoundMode::TOWARDS_INFINITY, RoundMode::HALF_NEG_INFINITY,   RoundMode::HALF_POS_INFINITY,
       RoundMode::HALF_TO_EVEN,     RoundMode::HALF_TO_ODD, RoundMode::HALF_TOWARDS_ZERO,
-      RoundMode::NEAREST,
+      RoundMode::HALF_TOWARDS_INFINITY,
   };
   this->SetRoundMultiple(1);
-  std::string values("[0, 1, 13, 50, 125]");
+  std::string values("[0, 1, 13, 50, 115]");
 
   for (auto round_mode : round_modes) {
     this->SetRoundMode(round_mode);
@@ -1545,7 +1545,7 @@ TYPED_TEST(TestUnaryMRoundUnsigned, MRound) {
 
     if (round_multiple == -2.0F) {
       this->AssertUnaryOp(MRound, values,
-                          ArrayFromJSON(float64(), "[0, 2, 14, 50, 126]"));
+                          ArrayFromJSON(float64(), "[0, 2, 14, 50, 116]"));
     } else if (round_multiple == -0.05F) {
       this->AssertUnaryOp(MRound, values, ArrayFromJSON(float64(), values));
     } else if (round_multiple == 0.1F) {
@@ -1554,7 +1554,7 @@ TYPED_TEST(TestUnaryMRoundUnsigned, MRound) {
       this->AssertUnaryOp(MRound, values, ArrayFromJSON(float64(), "[0, 0, 0, 0, 0]"));
     } else if (round_multiple == 10.0F) {
       this->AssertUnaryOp(MRound, values,
-                          ArrayFromJSON(float64(), "[0, 0, 10, 50, 130]"));
+                          ArrayFromJSON(float64(), "[0, 0, 10, 50, 120]"));
     } else if (round_multiple == 100.0F) {
       this->AssertUnaryOp(MRound, values,
                           ArrayFromJSON(float64(), "[0, 0, 0, 100, 100]"));
@@ -1571,10 +1571,10 @@ TYPED_TEST(TestUnaryMRoundFloating, MRound) {
 
   // Test different rounding modes for rounding multiple of 1
   RoundMode round_modes[] = {
-      RoundMode::DOWNWARD,         RoundMode::UPWARD,      RoundMode::TOWARDS_ZERO,
-      RoundMode::TOWARDS_INFINITY, RoundMode::HALF_DOWN,   RoundMode::HALF_UP,
+      RoundMode::TOWARDS_NEG_INFINITY,         RoundMode::TOWARDS_POS_INFINITY,      RoundMode::TOWARDS_ZERO,
+      RoundMode::TOWARDS_INFINITY, RoundMode::HALF_NEG_INFINITY,   RoundMode::HALF_POS_INFINITY,
       RoundMode::HALF_TO_EVEN,     RoundMode::HALF_TO_ODD, RoundMode::HALF_TOWARDS_ZERO,
-      RoundMode::NEAREST,
+      RoundMode::HALF_TOWARDS_INFINITY,
   };
   this->SetRoundMultiple(1);
   std::string values("[3.2, 3.5, 3.7, 4.5, -3.2, -3.5, -3.7]");
@@ -1588,26 +1588,22 @@ TYPED_TEST(TestUnaryMRoundFloating, MRound) {
     this->AssertUnaryOp(MRound, MakeArray(min, max), MakeArray(min, max));
 
     switch (round_mode) {
-      case RoundMode::DOWNWARD:
       case RoundMode::TOWARDS_NEG_INFINITY:
         this->AssertUnaryOp(MRound, values, "[3.0, 3.0, 3.0, 4.0, -4.0, -4.0, -4.0]");
         break;
-      case RoundMode::UPWARD:
       case RoundMode::TOWARDS_POS_INFINITY:
         this->AssertUnaryOp(MRound, values, "[4.0, 4.0, 4.0, 5.0, -3.0, -3.0, -3.0]");
         break;
       case RoundMode::TOWARDS_ZERO:
-      case RoundMode::AWAY_FROM_INFINITY:
         this->AssertUnaryOp(MRound, values, "[3.0, 3.0, 3.0, 4.0, -3.0, -3.0, -3.0]");
         break;
       case RoundMode::TOWARDS_INFINITY:
-      case RoundMode::AWAY_FROM_ZERO:
         this->AssertUnaryOp(MRound, values, "[4.0, 4.0, 4.0, 5.0, -4.0, -4.0, -4.0]");
         break;
-      case RoundMode::HALF_UP:
+      case RoundMode::HALF_POS_INFINITY:
         this->AssertUnaryOp(MRound, values, "[3.0, 4.0, 4.0, 5.0, -3.0, -3.0, -4.0]");
         break;
-      case RoundMode::HALF_DOWN:
+      case RoundMode::HALF_NEG_INFINITY:
         this->AssertUnaryOp(MRound, values, "[3.0, 3.0, 4.0, 4.0, -3.0, -4.0, -4.0]");
         break;
       case RoundMode::HALF_TO_EVEN:
@@ -1617,12 +1613,9 @@ TYPED_TEST(TestUnaryMRoundFloating, MRound) {
         this->AssertUnaryOp(MRound, values, "[3.0, 3.0, 4.0, 5.0, -3.0, -3.0, -4.0]");
         break;
       case RoundMode::HALF_TOWARDS_ZERO:
-      case RoundMode::HALF_AWAY_FROM_INFINITY:
         this->AssertUnaryOp(MRound, values, "[3.0, 3.0, 4.0, 4.0, -3.0, -3.0, -4.0]");
         break;
       case RoundMode::HALF_TOWARDS_INFINITY:
-      case RoundMode::HALF_AWAY_FROM_ZERO:
-      case RoundMode::NEAREST:
         this->AssertUnaryOp(MRound, values, "[3.0, 4.0, 4.0, 5.0, -3.0, -4.0, -4.0]");
         break;
       default:

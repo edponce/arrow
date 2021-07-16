@@ -442,11 +442,12 @@ If any of the input element(s) is null, the corresponding output element is null
 
 * \(1) Output value is a 64-bit floating-point for integral inputs and the
   retains the same type for floating-point inputs.  By default rounding functions
-  displace a value to the nearest integer with a round to even for breaking ties.
-  Options are available to control the rounding behavior.
-* \(2) The ``multiple`` option specifies the rounding
-  scale and precision.  Only the absolute value of the ``rounding multiple`` is
-  used, that is, its sign is ignored.
+  displace a value to the nearest integer.  Options are available to control the
+  rounding behavior.
+* \(2) The ``multiple`` option specifies the rounding scale and precision.
+  Only the absolute value of the ``rounding multiple`` is used, that is, its sign
+  is ignored. For example, 100 corresponds to rounding to the nearest multiple
+  of 100 (zeroing the ones and tens digits).
 * \(3) The ``ndigits`` option specifies the rounding precision in
   terms of number of digits.  A negative value corresponds to digits in the
   non-fractional part. For example, -2 corresponds to rounding to the nearest
@@ -455,17 +456,16 @@ If any of the input element(s) is null, the corresponding output element is null
 +-------------------------+---------------------------------+
 | Round mode              | Description/Examples            |
 +=========================+=================================+
-| DOWNWARD                | Equivalent to ``floor(x)``      |
-| TOWARDS_NEG_INFINITY    | 3.7 -> 3, -3.2 -> -4            |
+| TOWARDS_NEG_INFINITY    | Equivalent to ``floor(x)``      |
+| DOWNWARD                | 3.7 -> 3, -3.2 -> -4            |
 +-------------------------+---------------------------------+
-| UPWARD                  | Equivalent to ``ceil(x)``       |
-| TOWARDS_POS_INFINITY    | 3.2 -> 4, -3.7 -> -3            |
+| TOWARDS_POS_INFINITY    | Equivalent to ``ceil(x)``       |
+| UPWARD                  | 3.2 -> 4, -3.7 -> -3            |
 +-------------------------+---------------------------------+
 | TOWARDS_ZERO            | Equivalent to ``trunc(x)``      |
-| AWAY_FROM_INFINITY      | 3.7 -> 3, -3.7 -> -3            |
+|                         | 3.7 -> 3, -3.7 -> -3            |
 +-------------------------+---------------------------------+
 | TOWARDS_INFINITY        | 3.2 -> 4, -3.2 -> -4            |
-| AWAY_FROM_ZERO          |                                 |
 +-------------------------+---------------------------------+
 | HALF_UP                 | 3.5 -> 4, 4.5 -> 5, -3.5 -> -3  |
 | HALF_POS_INFINITY       |                                 |
@@ -478,11 +478,9 @@ If any of the input element(s) is null, the corresponding output element is null
 | HALF_TO_ODD             | 3.5 -> 3, 4.5 -> 5, -3.5 -> -3  |
 +-------------------------+---------------------------------+
 | HALF_TOWARDS_ZERO       | 3.5 -> 3, 4.5 -> 4, -3.5 -> -3  |
-| HALF_AWAY_FROM_INFINITY |                                 |
 +-------------------------+---------------------------------+
-| HALF_TOWARDS_INFINITY   | Round nearest integer           |
-| HALF_AWAY_FROM_ZERO     | 3.5 -> 4, 4.5 -> 5, -3.5 -> -4  |
-| NEAREST                 |                                 |
+| HALF_TOWARDS_INFINITY   | Round to nearest integer        |
+| NEAREST                 | 3.5 -> 4, 4.5 -> 5, -3.5 -> -4  |
 +-------------------------+---------------------------------+
 
 +----------------+---------------+----------------------------+
@@ -494,9 +492,9 @@ If any of the input element(s) is null, the corresponding output element is null
 +----------------+--------------------------------------------+
 | 10             | -1            | Round to multiple of 10    |
 +----------------+--------------------------------------------+
-| 2              |               | Round to multiple of 2     |
+| 2              | NA            | Round to multiple of 2     |
 +----------------+--------------------------------------------+
-| 0              |               | Returns 0                  |
+| 0              | NA            | Returns 0                  |
 +----------------+--------------------------------------------+
 
 Comparisons

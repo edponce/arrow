@@ -52,35 +52,31 @@ class ARROW_EXPORT ElementWiseAggregateOptions : public FunctionOptions {
   bool skip_nulls;
 };
 
+/// Rounding modes for Round and MRound functions. General modes are prefixed
+/// with TOWARDS and tie-breaker modes are prefixed with HALF. Common aliases
+/// are available for several modes.
 enum class RoundMode {
-  // floor (towards negative infinity)
-  DOWNWARD,
-  TOWARDS_NEG_INFINITY,
-  // ceiling (towards positive infinity)
-  UPWARD,
+  // Values are used as index during registration of rounding kernels,
+  // so starting value is 0 and continue consecutively.
+
+  /// Equivalent to floor
+  TOWARDS_NEG_INFINITY = 0,
+  DOWNWARD = TOWARDS_NEG_INFINITY,
+  /// Equivalent to ceiling
   TOWARDS_POS_INFINITY,
-  // truncate
+  UPWARD = TOWARDS_POS_INFINITY,
+  /// Equivalent to truncate
   TOWARDS_ZERO,
-  AWAY_FROM_INFINITY,
-  // towards +-infinity (away from zero)
   TOWARDS_INFINITY,
-  AWAY_FROM_ZERO,
-  // Tie-breakers
-  // half down (half towards negative infinity)
-  HALF_DOWN,
-  // half up (half towards positive infinity)
-  HALF_UP,
-  // half to even
-  HALF_TO_EVEN,
-  // half to odd
-  HALF_TO_ODD,
-  // half towards zero
+  HALF_NEG_INFINITY,
+  HALF_DOWN = HALF_NEG_INFINITY,
+  HALF_POS_INFINITY,
+  HALF_UP = HALF_POS_INFINITY,
   HALF_TOWARDS_ZERO,
-  HALF_AWAY_FROM_INFINITY,
-  // half towards infinity (half away from zero = nearest)
   HALF_TOWARDS_INFINITY,
-  HALF_AWAY_FROM_ZERO,
-  NEAREST,
+  NEAREST = HALF_TOWARDS_INFINITY,
+  HALF_TO_EVEN,
+  HALF_TO_ODD,
 };
 
 class ARROW_EXPORT RoundOptions : public FunctionOptions {

@@ -839,7 +839,7 @@ struct Trunc {
   }
 };
 
-struct RoundUtils {
+struct RoundHelper {
   template <typename T, enable_if_t<std::is_floating_point<T>::value, bool> = true>
   static bool ApproxEqual(const T x, const T y, const int ulp = 7) {
     // https://en.cppreference.com/w/cpp/types/numeric_limits/epsilon
@@ -858,144 +858,115 @@ struct RoundUtils {
     // |frac| == 0.5?
     return ApproxEqual(std::fabs(std::fmod(val, T(1))), T(0.5));
   }
+};
 
-  template <typename T>
-  static constexpr enable_if_floating_point<T> Floor(T val) {
+// Specializations of rounding implementations for kernels
+template <typename T, RoundMode M>
+struct RoundUtils {
+    static enable_if_floating_point<T> Round(T) { return T(0); };
+};
+
+template <typename T>
+struct RoundUtils<T, RoundMode::TOWARDS_NEG_INFINITY> {
+  static constexpr enable_if_floating_point<T> Round(T val) {
     return std::floor(val);
-  }
-
-  template <typename T>
-  static constexpr enable_if_floating_point<T> Ceiling(T val) {
-    return std::ceil(val);
-  }
-
-  template <typename T>
-  static constexpr enable_if_floating_point<T> Truncate(T val) {
-    return std::trunc(val);
-  }
-
-  template <typename T>
-  static constexpr enable_if_floating_point<T> TowardsInfinity(T val) {
-    return std::signbit(val) ? std::floor(val) : std::ceil(val);
-  }
-
-  template <typename T>
-  static constexpr enable_if_floating_point<T> HalfDown(T val) {
-    return std::ceil(val - T(0.5));
-  }
-
-  template <typename T>
-  static constexpr enable_if_floating_point<T> HalfUp(T val) {
-    return std::floor(val + T(0.5));
-  }
-
-  template <typename T>
-  static enable_if_floating_point<T> HalfToEven(T val) {
-    if (IsHalf(val)) {
-      auto floor = std::floor(val);
-      // Odd + 1, Even + 0
-      return floor + (std::fmod(std::fabs(floor), T(2)) >= T(1));
-    }
-    return std::round(val);
-  }
-
-  template <typename T>
-  static enable_if_floating_point<T> HalfToOdd(T val) {
-    if (IsHalf(val)) {
-      auto floor = std::floor(val);
-      // Odd + 0, Even + 1
-      return floor + (std::fmod(std::fabs(floor), T(2)) < T(1));
-    }
-    return std::round(val);
-  }
-
-  template <typename T>
-  static constexpr enable_if_floating_point<T> Nearest(T val) {
-    return std::round(val);
-  }
-
-  template <typename T>
-  static constexpr enable_if_floating_point<T> HalfTowardsZero(T val) {
-    return std::copysign(std::ceil(std::fabs(val) - T(0.5)), val);
-  }
-
-  template <typename T>
-  static enable_if_floating_point<T> Round(T val, T mult, RoundMode round_mode,
-                                           Status* st) {
-    val /= mult;
-
-    T result;
-    switch (round_mode) {
-      case RoundMode::DOWNWARD:
-      case RoundMode::TOWARDS_NEG_INFINITY:
-        result = Floor(val);
-        break;
-      case RoundMode::UPWARD:
-      case RoundMode::TOWARDS_POS_INFINITY:
-        result = Ceiling(val);
-        break;
-      case RoundMode::TOWARDS_ZERO:
-      case RoundMode::AWAY_FROM_INFINITY:
-        result = Truncate(val);
-        break;
-      case RoundMode::TOWARDS_INFINITY:
-      case RoundMode::AWAY_FROM_ZERO:
-        result = TowardsInfinity(val);
-        break;
-      case RoundMode::HALF_UP:
-        result = HalfUp(val);
-        break;
-      case RoundMode::HALF_DOWN:
-        result = HalfDown(val);
-        break;
-      case RoundMode::HALF_TO_EVEN:
-        result = HalfToEven(val);
-        break;
-      case RoundMode::HALF_TO_ODD:
-        result = HalfToOdd(val);
-        break;
-      case RoundMode::HALF_TOWARDS_ZERO:
-      case RoundMode::HALF_AWAY_FROM_INFINITY:
-        result = HalfTowardsZero(val);
-        break;
-      case RoundMode::HALF_TOWARDS_INFINITY:
-      case RoundMode::HALF_AWAY_FROM_ZERO:
-      case RoundMode::NEAREST:
-        result = Nearest(val);
-        break;
-      default:
-        *st = Status::Invalid("invalid rounding mode");
-        return val;
-    }
-
-    return result * mult;
   }
 };
 
+template <typename T>
+struct RoundUtils<T, RoundMode::TOWARDS_POS_INFINITY> {
+  static constexpr enable_if_floating_point<T> Round(T val) {
+    return std::ceil(val);
+  }
+};
+
+template <typename T>
+struct RoundUtils<T, RoundMode::TOWARDS_ZERO> {
+  static constexpr enable_if_floating_point<T> Round(T val) {
+    return std::trunc(val);
+  }
+};
+
+template <typename T>
+struct RoundUtils<T, RoundMode::TOWARDS_INFINITY> {
+  static constexpr enable_if_floating_point<T> Round(T val) {
+    return std::signbit(val) ? std::floor(val) : std::ceil(val);
+  }
+};
+
+template <typename T>
+struct RoundUtils<T, RoundMode::HALF_POS_INFINITY> {
+  static constexpr enable_if_floating_point<T> Round(T val) {
+    return std::floor(val + T(0.5));
+  }
+};
+
+template <typename T>
+struct RoundUtils<T, RoundMode::HALF_NEG_INFINITY> {
+  static constexpr enable_if_floating_point<T> Round(T val) {
+    return std::ceil(val - T(0.5));
+  }
+};
+
+template <typename T>
+struct RoundUtils<T, RoundMode::HALF_TO_EVEN> {
+  static enable_if_floating_point<T> Round(T val) {
+    if (!RoundHelper::IsHalf(val)) {
+      return std::round(val);
+    }
+
+    auto floor = std::floor(val);
+    // Odd + 1, Even + 0
+    return floor + T(std::fmod(std::fabs(floor), T(2)) >= T(1));
+  }
+};
+
+template <typename T>
+struct RoundUtils<T, RoundMode::HALF_TO_ODD> {
+  static enable_if_floating_point<T> Round(T val) {
+    if (!RoundHelper::IsHalf(val)) {
+      return std::round(val);
+    }
+
+    auto floor = std::floor(val);
+    // Odd + 0, Even + 1
+    return floor + T(std::fmod(std::fabs(floor), T(2)) < T(1));
+  }
+};
+
+template <typename T>
+struct RoundUtils<T, RoundMode::HALF_TOWARDS_ZERO> {
+  static constexpr enable_if_floating_point<T> Round(T val) {
+    return std::copysign(std::ceil(std::fabs(val) - T(0.5)), val);
+  }
+};
+
+template <typename T>
+struct RoundUtils<T, RoundMode::HALF_TOWARDS_INFINITY> {
+  static constexpr enable_if_floating_point<T> Round(T val) {
+    return std::round(val);
+  }
+};
+
+template <RoundMode M>
 struct MRound {
   template <typename T, typename Arg,
             enable_if_t<std::is_arithmetic<Arg>::value, bool> = true>
-  static enable_if_floating_point<T> Call(KernelContext* ctx, Arg arg, Status* st) {
+  static enable_if_floating_point<T> Call(KernelContext* ctx, Arg arg, Status*) {
     auto options = OptionsWrapper<MRoundOptions>::Get(ctx);
-    const T mult = std::fabs(options.multiple);
-    if (mult == T(0)) {
-      return T(0);
-    }
-
-    // Cast input based on output type
-    return RoundUtils::Round(T(arg), mult, options.round_mode, st);
+    const auto mult = std::fabs(T(options.multiple));
+    return (mult == T(0)) ? T(0) : (RoundUtils<T, M>::Round(arg / mult) * mult);
   }
 };
 
+template <RoundMode M>
 struct Round {
   template <typename T, typename Arg,
             enable_if_t<std::is_arithmetic<Arg>::value, bool> = true>
-  static enable_if_floating_point<T> Call(KernelContext* ctx, Arg arg, Status* st) {
+  static enable_if_floating_point<T> Call(KernelContext* ctx, Arg arg, Status*) {
     auto options = OptionsWrapper<RoundOptions>::Get(ctx);
-    const T mult = std::pow(T(10), T(-options.ndigits));
-
-    // Cast input based on output type
-    return RoundUtils::Round(T(arg), mult, options.round_mode, st);
+    const auto mult = std::pow(T(10), T(-options.ndigits));
+    return RoundUtils<T, M>::Round(arg / mult) * mult;
   }
 };
 
@@ -1432,18 +1403,35 @@ std::shared_ptr<ScalarFunction> MakeUnaryArithmeticFunctionNotNull(
   return func;
 }
 
-// Like MakeUnaryArithmeticFunction, but for arithmetic ops that output floating-point
-// type matching floating-point input and DoubleType for integral inputs, only on non-null
-// output.
-template <typename Op>
-std::shared_ptr<ScalarFunction> MakeUnaryArithmeticFunctionWithFloatOutType(
+// Like MakeUnaryArithmeticFunction, but for unary rounding functions that control
+// kernel dispatch based on RoundMode, only on non-null output.
+template <template <RoundMode RndMode> typename Op, typename Opts>
+std::shared_ptr<ScalarFunction> MakeUnaryRoundFunction(
     std::string name, const FunctionDoc* doc,
     const FunctionOptions* default_options = NULLPTR, KernelInit init = NULLPTR) {
   auto func =
       std::make_shared<ArithmeticFunction>(name, Arity::Unary(), doc, default_options);
   for (const auto& ty : NumericTypes()) {
     auto out_ty = is_integer(ty->id()) ? float64() : ty;
-    auto exec = GenerateArithmeticWithFloatOutType<ScalarUnary, Op>(ty);
+    // Note: Order of rounding modes needs to follow the order of unique
+    // values in enum definition (see api_scalar.h) because they are use as
+    // indexing values.
+    std::vector<ArrayKernelExec> execs = {
+      GenerateArithmeticWithFloatOutType<ScalarUnary, Op<RoundMode::TOWARDS_NEG_INFINITY>>(ty),
+      GenerateArithmeticWithFloatOutType<ScalarUnary, Op<RoundMode::TOWARDS_POS_INFINITY>>(ty),
+      GenerateArithmeticWithFloatOutType<ScalarUnary, Op<RoundMode::TOWARDS_ZERO>>(ty),
+      GenerateArithmeticWithFloatOutType<ScalarUnary, Op<RoundMode::TOWARDS_INFINITY>>(ty),
+      GenerateArithmeticWithFloatOutType<ScalarUnary, Op<RoundMode::HALF_NEG_INFINITY>>(ty),
+      GenerateArithmeticWithFloatOutType<ScalarUnary, Op<RoundMode::HALF_POS_INFINITY>>(ty),
+      GenerateArithmeticWithFloatOutType<ScalarUnary, Op<RoundMode::HALF_TOWARDS_ZERO>>(ty),
+      GenerateArithmeticWithFloatOutType<ScalarUnary, Op<RoundMode::HALF_TOWARDS_INFINITY>>(ty),
+      GenerateArithmeticWithFloatOutType<ScalarUnary, Op<RoundMode::HALF_TO_EVEN>>(ty),
+      GenerateArithmeticWithFloatOutType<ScalarUnary, Op<RoundMode::HALF_TO_ODD>>(ty),
+    };
+    auto exec = [execs](KernelContext* ctx, const ExecBatch& batch, Datum* out) {
+        RoundMode round_mode = OptionsWrapper<Opts>::Get(ctx).round_mode;
+        return execs[int(round_mode)](ctx, batch, out);
+    };
     DCHECK_OK(func->AddKernel({ty}, out_ty, exec, init));
   }
   return func;
@@ -2039,13 +2027,13 @@ void RegisterScalarArithmetic(FunctionRegistry* registry) {
   auto trunc = MakeUnaryArithmeticFunctionFloatingPoint<Trunc>("trunc", &trunc_doc);
   DCHECK_OK(registry->AddFunction(std::move(trunc)));
 
-  static auto kRoundOptions = RoundOptions::Defaults();
-  auto round = MakeUnaryArithmeticFunctionWithFloatOutType<Round>(
+  static FunctionOptions kRoundOptions = RoundOptions::Defaults();
+  auto round = MakeUnaryRoundFunction<Round, RoundOptions>(
       "round", &round_doc, &kRoundOptions, OptionsWrapper<RoundOptions>::Init);
   DCHECK_OK(registry->AddFunction(std::move(round)));
 
-  static auto kMRoundOptions = MRoundOptions::Defaults();
-  auto mround = MakeUnaryArithmeticFunctionWithFloatOutType<MRound>(
+  static FunctionOptions kMRoundOptions = MRoundOptions::Defaults();
+  auto mround = MakeUnaryRoundFunction<MRound, MRoundOptions>(
       "mround", &mround_doc, &kMRoundOptions, OptionsWrapper<MRoundOptions>::Init);
   DCHECK_OK(registry->AddFunction(std::move(mround)));
 }
