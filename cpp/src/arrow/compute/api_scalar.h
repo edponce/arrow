@@ -86,8 +86,7 @@ enum class RoundMode {
 class ARROW_EXPORT RoundOptions : public FunctionOptions {
  public:
   explicit RoundOptions(int32_t ndigits = 1,
-                        RoundMode round_mode = RoundMode::HALF_TO_EVEN)
-      : ndigits(ndigits), round_mode(round_mode) {}
+                        RoundMode round_mode = RoundMode::HALF_TO_EVEN);
   constexpr static char const kTypeName[] = "RoundOptions";
   static RoundOptions Defaults() { return RoundOptions(); }
   int32_t ndigits;
@@ -97,8 +96,7 @@ class ARROW_EXPORT RoundOptions : public FunctionOptions {
 class ARROW_EXPORT MRoundOptions : public FunctionOptions {
  public:
   explicit MRoundOptions(float multiple = 1.0F,
-                         RoundMode round_mode = RoundMode::HALF_TO_EVEN)
-      : multiple(multiple), round_mode(round_mode) {}
+                         RoundMode round_mode = RoundMode::HALF_TO_EVEN);
   constexpr static char const kTypeName[] = "MRoundOptions";
   static MRoundOptions Defaults() { return MRoundOptions(); }
   float multiple;

@@ -1564,7 +1564,7 @@ TYPED_TEST(TestUnaryMRoundUnsigned, MRound) {
 
 TYPED_TEST(TestUnaryMRoundFloating, MRound) {
   using CType = typename TestFixture::CType;
-  auto min = std::numeric_limits<CType>::min();
+  auto min = std::numeric_limits<CType>::lowest();
   auto max = std::numeric_limits<CType>::max();
 
   this->SetNansEqual(true);
