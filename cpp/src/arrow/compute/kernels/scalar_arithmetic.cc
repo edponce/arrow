@@ -948,25 +948,25 @@ struct RoundUtils<T, RoundMode::HALF_TOWARDS_INFINITY> {
   }
 };
 
-template <RoundMode M>
+template <RoundMode RndMode>
 struct MRound {
   template <typename T, typename Arg,
             enable_if_t<std::is_arithmetic<Arg>::value, bool> = true>
   static enable_if_floating_point<T> Call(KernelContext* ctx, Arg arg, Status*) {
     auto options = OptionsWrapper<MRoundOptions>::Get(ctx);
     const auto mult = std::fabs(T(options.multiple));
-    return (mult == T(0)) ? T(0) : (RoundUtils<T, M>::Round(arg / mult) * mult);
+    return (mult == T(0)) ? T(0) : (RoundUtils<T, RndMode>::Round(arg / mult) * mult);
   }
 };
 
-template <RoundMode M>
+template <RoundMode RndMode>
 struct Round {
   template <typename T, typename Arg,
             enable_if_t<std::is_arithmetic<Arg>::value, bool> = true>
   static enable_if_floating_point<T> Call(KernelContext* ctx, Arg arg, Status*) {
     auto options = OptionsWrapper<RoundOptions>::Get(ctx);
     const auto mult = std::pow(T(10), T(-options.ndigits));
-    return RoundUtils<T, M>::Round(arg / mult) * mult;
+    return RoundUtils<T, RndMode>::Round(arg / mult) * mult;
   }
 };
 
