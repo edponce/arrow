@@ -58,15 +58,11 @@ class ARROW_EXPORT ElementWiseAggregateOptions : public FunctionOptions {
 enum class RoundMode {
   // Values are used as index during registration of rounding kernels,
   // so starting value is 0 and continue consecutively.
-
-  /// Equivalent to floor
-  TOWARDS_NEG_INFINITY = 0,
+  TOWARDS_NEG_INFINITY = 0,  // equivalent to floor
   DOWNWARD = TOWARDS_NEG_INFINITY,
-  /// Equivalent to ceiling
-  TOWARDS_POS_INFINITY,
+  TOWARDS_POS_INFINITY,      // equivalent to ceiling
   UPWARD = TOWARDS_POS_INFINITY,
-  /// Equivalent to truncate
-  TOWARDS_ZERO,
+  TOWARDS_ZERO,              // equivalent to truncate
   TOWARDS_INFINITY,
   HALF_NEG_INFINITY,
   HALF_DOWN = HALF_NEG_INFINITY,

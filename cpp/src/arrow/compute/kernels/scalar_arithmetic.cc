@@ -820,21 +820,24 @@ struct Log1pChecked {
 
 struct Floor {
   template <typename T, typename Arg>
-  static constexpr enable_if_floating_point<T> Call(KernelContext*, Arg arg, Status*) {
+  static constexpr enable_if_floating_point<Arg, T> Call(KernelContext*, Arg arg, Status*) {
+    static_assert(std::is_same<T, Arg>::value, "");
     return std::floor(arg);
   }
 };
 
 struct Ceil {
   template <typename T, typename Arg>
-  static constexpr enable_if_floating_point<T> Call(KernelContext*, Arg arg, Status*) {
+  static constexpr enable_if_floating_point<Arg, T> Call(KernelContext*, Arg arg, Status*) {
+    static_assert(std::is_same<T, Arg>::value, "");
     return std::ceil(arg);
   }
 };
 
 struct Trunc {
   template <typename T, typename Arg>
-  static constexpr enable_if_floating_point<T> Call(KernelContext*, Arg arg, Status*) {
+  static constexpr enable_if_floating_point<Arg, T> Call(KernelContext*, Arg arg, Status*) {
+    static_assert(std::is_same<T, Arg>::value, "");
     return std::trunc(arg);
   }
 };
@@ -950,10 +953,13 @@ struct RoundUtils<T, RoundMode::HALF_TOWARDS_INFINITY> {
 
 template <RoundMode RndMode>
 struct MRound {
-  template <typename T, typename Arg,
-            enable_if_t<std::is_arithmetic<Arg>::value, bool> = true>
-  static enable_if_floating_point<T> Call(KernelContext* ctx, Arg arg, Status*) {
+  template <typename T, typename Arg>
+  static enable_if_floating_point<Arg, T> Call(KernelContext* ctx, Arg arg, Status*) {
+    static_assert(std::is_same<T, Arg>::value, "");
     auto options = OptionsWrapper<MRoundOptions>::Get(ctx);
+    if (std::isnan(arg)) {
+        return arg;
+    }
     const auto mult = std::fabs(T(options.multiple));
     return (mult == T(0)) ? T(0) : (RoundUtils<T, RndMode>::Round(arg / mult) * mult);
   }
@@ -961,9 +967,9 @@ struct MRound {
 
 template <RoundMode RndMode>
 struct Round {
-  template <typename T, typename Arg,
-            enable_if_t<std::is_arithmetic<Arg>::value, bool> = true>
-  static enable_if_floating_point<T> Call(KernelContext* ctx, Arg arg, Status*) {
+  template <typename T, typename Arg>
+  static enable_if_floating_point<Arg, T> Call(KernelContext* ctx, Arg arg, Status*) {
+    static_assert(std::is_same<T, Arg>::value, "");
     auto options = OptionsWrapper<RoundOptions>::Get(ctx);
     const auto mult = std::pow(T(10), T(-options.ndigits));
     return RoundUtils<T, RndMode>::Round(arg / mult) * mult;
@@ -1052,36 +1058,6 @@ ArrayKernelExec ShiftExecFromOp(detail::GetTypeId get_id) {
 template <template <typename... Args> class KernelGenerator, typename Op>
 ArrayKernelExec GenerateArithmeticFloatingPoint(detail::GetTypeId get_id) {
   switch (get_id.id) {
-    case Type::FLOAT:
-      return KernelGenerator<FloatType, FloatType, Op>::Exec;
-    case Type::DOUBLE:
-      return KernelGenerator<DoubleType, DoubleType, Op>::Exec;
-    default:
-      DCHECK(false);
-      return ExecFail;
-  }
-}
-
-template <template <typename... Args> class KernelGenerator, typename Op>
-ArrayKernelExec GenerateArithmeticWithFloatOutType(detail::GetTypeId get_id) {
-  switch (get_id.id) {
-    case Type::INT8:
-      return KernelGenerator<DoubleType, Int8Type, Op>::Exec;
-    case Type::UINT8:
-      return KernelGenerator<DoubleType, UInt8Type, Op>::Exec;
-    case Type::INT16:
-      return KernelGenerator<DoubleType, Int16Type, Op>::Exec;
-    case Type::UINT16:
-      return KernelGenerator<DoubleType, UInt16Type, Op>::Exec;
-    case Type::INT32:
-      return KernelGenerator<DoubleType, Int32Type, Op>::Exec;
-    case Type::UINT32:
-      return KernelGenerator<DoubleType, UInt32Type, Op>::Exec;
-    case Type::INT64:
-    case Type::TIMESTAMP:
-      return KernelGenerator<DoubleType, Int64Type, Op>::Exec;
-    case Type::UINT64:
-      return KernelGenerator<DoubleType, UInt64Type, Op>::Exec;
     case Type::FLOAT:
       return KernelGenerator<FloatType, FloatType, Op>::Exec;
     case Type::DOUBLE:
@@ -1410,29 +1386,28 @@ std::shared_ptr<ScalarFunction> MakeUnaryRoundFunction(
     std::string name, const FunctionDoc* doc,
     const FunctionOptions* default_options = NULLPTR, KernelInit init = NULLPTR) {
   auto func =
-      std::make_shared<ArithmeticFunction>(name, Arity::Unary(), doc, default_options);
-  for (const auto& ty : NumericTypes()) {
-    auto out_ty = is_integer(ty->id()) ? float64() : ty;
-    // Note: Order of rounding modes needs to follow the order of unique
-    // values in enum definition (see api_scalar.h) because they are used as
+      std::make_shared<ArithmeticFloatingPointFunction>(name, Arity::Unary(), doc, default_options);
+  for (const auto& ty : FloatingPointTypes()) {
+    // Order of ArrayKernelExec w.r.t. RoundMode needs to follow the order of
+    // values in RoundMode definition (see api_scalar.h) because they are used as
     // indexing values.
     std::vector<ArrayKernelExec> execs = {
-      GenerateArithmeticWithFloatOutType<ScalarUnary, Op<RoundMode::TOWARDS_NEG_INFINITY>>(ty),
-      GenerateArithmeticWithFloatOutType<ScalarUnary, Op<RoundMode::TOWARDS_POS_INFINITY>>(ty),
-      GenerateArithmeticWithFloatOutType<ScalarUnary, Op<RoundMode::TOWARDS_ZERO>>(ty),
-      GenerateArithmeticWithFloatOutType<ScalarUnary, Op<RoundMode::TOWARDS_INFINITY>>(ty),
-      GenerateArithmeticWithFloatOutType<ScalarUnary, Op<RoundMode::HALF_NEG_INFINITY>>(ty),
-      GenerateArithmeticWithFloatOutType<ScalarUnary, Op<RoundMode::HALF_POS_INFINITY>>(ty),
-      GenerateArithmeticWithFloatOutType<ScalarUnary, Op<RoundMode::HALF_TOWARDS_ZERO>>(ty),
-      GenerateArithmeticWithFloatOutType<ScalarUnary, Op<RoundMode::HALF_TOWARDS_INFINITY>>(ty),
-      GenerateArithmeticWithFloatOutType<ScalarUnary, Op<RoundMode::HALF_TO_EVEN>>(ty),
-      GenerateArithmeticWithFloatOutType<ScalarUnary, Op<RoundMode::HALF_TO_ODD>>(ty),
+      GenerateArithmeticFloatingPoint<ScalarUnary, Op<RoundMode::TOWARDS_NEG_INFINITY>>(ty),
+      GenerateArithmeticFloatingPoint<ScalarUnary, Op<RoundMode::TOWARDS_POS_INFINITY>>(ty),
+      GenerateArithmeticFloatingPoint<ScalarUnary, Op<RoundMode::TOWARDS_ZERO>>(ty),
+      GenerateArithmeticFloatingPoint<ScalarUnary, Op<RoundMode::TOWARDS_INFINITY>>(ty),
+      GenerateArithmeticFloatingPoint<ScalarUnary, Op<RoundMode::HALF_NEG_INFINITY>>(ty),
+      GenerateArithmeticFloatingPoint<ScalarUnary, Op<RoundMode::HALF_POS_INFINITY>>(ty),
+      GenerateArithmeticFloatingPoint<ScalarUnary, Op<RoundMode::HALF_TOWARDS_ZERO>>(ty),
+      GenerateArithmeticFloatingPoint<ScalarUnary, Op<RoundMode::HALF_TOWARDS_INFINITY>>(ty),
+      GenerateArithmeticFloatingPoint<ScalarUnary, Op<RoundMode::HALF_TO_EVEN>>(ty),
+      GenerateArithmeticFloatingPoint<ScalarUnary, Op<RoundMode::HALF_TO_ODD>>(ty),
     };
     auto exec = [execs](KernelContext* ctx, const ExecBatch& batch, Datum* out) {
         RoundMode round_mode = OptionsWrapper<Opts>::Get(ctx).round_mode;
         return execs[int(round_mode)](ctx, batch, out);
     };
-    DCHECK_OK(func->AddKernel({ty}, out_ty, exec, init));
+    DCHECK_OK(func->AddKernel({ty}, ty, exec, init));
   }
   return func;
 }
@@ -1480,9 +1455,8 @@ std::shared_ptr<ScalarFunction> MakeUnaryArithmeticFunctionFloatingPoint(
   auto func =
       std::make_shared<ArithmeticFloatingPointFunction>(name, Arity::Unary(), doc);
   for (const auto& ty : FloatingPointTypes()) {
-    auto output = is_integer(ty->id()) ? float64() : ty;
     auto exec = GenerateArithmeticFloatingPoint<ScalarUnary, Op>(ty);
-    DCHECK_OK(func->AddKernel({ty}, output, exec));
+    DCHECK_OK(func->AddKernel({ty}, ty, exec));
   }
   return func;
 }
@@ -1493,9 +1467,8 @@ std::shared_ptr<ScalarFunction> MakeUnaryArithmeticFunctionFloatingPointNotNull(
   auto func =
       std::make_shared<ArithmeticFloatingPointFunction>(name, Arity::Unary(), doc);
   for (const auto& ty : FloatingPointTypes()) {
-    auto output = is_integer(ty->id()) ? float64() : ty;
     auto exec = GenerateArithmeticFloatingPoint<ScalarUnaryNotNull, Op>(ty);
-    DCHECK_OK(func->AddKernel({ty}, output, exec));
+    DCHECK_OK(func->AddKernel({ty}, ty, exec));
   }
   return func;
 }
@@ -1506,9 +1479,8 @@ std::shared_ptr<ScalarFunction> MakeArithmeticFunctionFloatingPoint(
   auto func =
       std::make_shared<ArithmeticFloatingPointFunction>(name, Arity::Binary(), doc);
   for (const auto& ty : FloatingPointTypes()) {
-    auto output = is_integer(ty->id()) ? float64() : ty;
     auto exec = GenerateArithmeticFloatingPoint<ScalarBinaryEqualTypes, Op>(ty);
-    DCHECK_OK(func->AddKernel({ty, ty}, output, exec));
+    DCHECK_OK(func->AddKernel({ty, ty}, ty, exec));
   }
   return func;
 }

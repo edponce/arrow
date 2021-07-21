@@ -1400,42 +1400,38 @@ TYPED_TEST(TestUnaryArithmeticFloating, AbsoluteValue) {
   }
 }
 
-TYPED_TEST(TestUnaryRoundSigned, Round) {
-  using CType = typename TestFixture::CType;
-  auto min = std::numeric_limits<CType>::min();
-  auto max = std::numeric_limits<CType>::max();
+constexpr std::initializer_list<RoundMode> kRoundModes = {
+  RoundMode::TOWARDS_NEG_INFINITY,
+  RoundMode::TOWARDS_POS_INFINITY,
+  RoundMode::TOWARDS_ZERO,
+  RoundMode::TOWARDS_INFINITY,
+  RoundMode::HALF_NEG_INFINITY,
+  RoundMode::HALF_POS_INFINITY,
+  RoundMode::HALF_TOWARDS_ZERO,
+  RoundMode::HALF_TOWARDS_INFINITY,
+  RoundMode::HALF_TO_EVEN,
+  RoundMode::HALF_TO_ODD,
+};
 
-  // Test different rounding modes for rounding multiple of 1
-  RoundMode round_modes[] = {
-      RoundMode::TOWARDS_NEG_INFINITY,         RoundMode::TOWARDS_POS_INFINITY,      RoundMode::TOWARDS_ZERO,
-      RoundMode::TOWARDS_INFINITY, RoundMode::HALF_NEG_INFINITY,   RoundMode::HALF_POS_INFINITY,
-      RoundMode::HALF_TO_EVEN,     RoundMode::HALF_TO_ODD, RoundMode::HALF_TOWARDS_ZERO,
-      RoundMode::HALF_TOWARDS_INFINITY,
-  };
+TYPED_TEST(TestUnaryRoundSigned, Round) {
+  // Test different rounding modes for N-digits of 0
   this->SetRoundNdigits(0);
   std::string values("[0, 1, -13, -50, 115]");
-
-  for (auto round_mode : round_modes) {
+  for (auto round_mode : kRoundModes) {
     this->SetRoundMode(round_mode);
-
     this->options_.round_mode = round_mode;
     this->AssertUnaryOp(Round, "[]", ArrayFromJSON(float64(), "[]"));
     this->AssertUnaryOp(Round, "[null]", ArrayFromJSON(float64(), "[null]"));
-    this->AssertUnaryOp(Round, this->MakeScalar(min), *arrow::MakeScalar(float64(), min));
-    this->AssertUnaryOp(Round, this->MakeScalar(max), *arrow::MakeScalar(float64(), max));
     this->AssertUnaryOp(Round, values, ArrayFromJSON(float64(), values));
   }
 
   // Test different round N-digits for NEAREST rounding mode
   int round_ndigits[] = {-2, -1, 0, 1, 2};
   this->SetRoundMode(RoundMode::NEAREST);
-
   for (auto round_ndigit : round_ndigits) {
     this->SetRoundNdigits(round_ndigit);
-
     this->AssertUnaryOp(Round, "[]", ArrayFromJSON(float64(), "[]"));
     this->AssertUnaryOp(Round, "[null]", ArrayFromJSON(float64(), "[null]"));
-
     if (round_ndigit >= 0) {
       this->AssertUnaryOp(Round, values, ArrayFromJSON(float64(), values));
     } else if (round_ndigit == -2) {
@@ -1448,45 +1444,131 @@ TYPED_TEST(TestUnaryRoundSigned, Round) {
   }
 }
 
-TYPED_TEST(TestUnaryMRoundSigned, MRound) {
-  using CType = typename TestFixture::CType;
-  auto min = std::numeric_limits<CType>::min();
-  auto max = std::numeric_limits<CType>::max();
+TYPED_TEST(TestUnaryRoundUnsigned, Round) {
+  // Test different rounding modes for N-digits of 0
+  this->SetRoundNdigits(0);
+  std::string values("[0, 1, 13, 50, 115]");
+  for (auto round_mode : kRoundModes) {
+    this->SetRoundMode(round_mode);
+    this->options_.round_mode = round_mode;
+    this->AssertUnaryOp(Round, "[]", ArrayFromJSON(float64(), "[]"));
+    this->AssertUnaryOp(Round, "[null]", ArrayFromJSON(float64(), "[null]"));
+    this->AssertUnaryOp(Round, values, ArrayFromJSON(float64(), values));
+  }
 
+  // Test different round N-digits for NEAREST rounding mode
+  int round_ndigits[] = {-2, -1, 0, 1, 2};
+  this->SetRoundMode(RoundMode::NEAREST);
+  for (auto round_ndigit : round_ndigits) {
+    this->SetRoundNdigits(round_ndigit);
+    this->AssertUnaryOp(Round, "[]", ArrayFromJSON(float64(), "[]"));
+    this->AssertUnaryOp(Round, "[null]", ArrayFromJSON(float64(), "[null]"));
+    if (round_ndigit >= 0) {
+      this->AssertUnaryOp(Round, values, ArrayFromJSON(float64(), values));
+    } else if (round_ndigit == -2) {
+      this->AssertUnaryOp(Round, values,
+                          ArrayFromJSON(float64(), "[0, 0, 0, 100, 100]"));
+    } else if (round_ndigit == -1) {
+      this->AssertUnaryOp(Round, values,
+                          ArrayFromJSON(float64(), "[0, 0, 10, 50, 120]"));
+    }
+  }
+}
+
+TYPED_TEST(TestUnaryRoundFloating, Round) {
+  using CType = typename TestFixture::CType;
+  auto min = std::numeric_limits<CType>::lowest();
+  auto max = std::numeric_limits<CType>::max();
+  this->SetNansEqual(true);
+
+  // Test different rounding modes for N-digits of 0
+  this->SetRoundNdigits(0);
+  std::string values("[3.2, 3.5, 3.7, 4.5, -3.2, -3.5, -3.7]");
+  for (auto round_mode : kRoundModes) {
+    this->SetRoundMode(round_mode);
+    this->AssertUnaryOp(Round, "[]", "[]");
+    this->AssertUnaryOp(Round, "[null, 0, Inf, -Inf, NaN, -NaN]",
+                        "[null, 0, Inf, -Inf, NaN, -NaN]");
+    this->AssertUnaryOp(Round, MakeArray(min, max), MakeArray(min, max));
+    switch (round_mode) {
+      case RoundMode::TOWARDS_NEG_INFINITY:
+        this->AssertUnaryOp(Round, values, "[3, 3, 3, 4, -4, -4, -4]");
+        break;
+      case RoundMode::TOWARDS_POS_INFINITY:
+        this->AssertUnaryOp(Round, values, "[4, 4, 4, 5, -3, -3, -3]");
+        break;
+      case RoundMode::TOWARDS_ZERO:
+        this->AssertUnaryOp(Round, values, "[3, 3, 3, 4, -3, -3, -3]");
+        break;
+      case RoundMode::TOWARDS_INFINITY:
+        this->AssertUnaryOp(Round, values, "[4, 4, 4, 5, -4, -4, -4]");
+        break;
+      case RoundMode::HALF_POS_INFINITY:
+        this->AssertUnaryOp(Round, values, "[3, 4, 4, 5, -3, -3, -4]");
+        break;
+      case RoundMode::HALF_NEG_INFINITY:
+        this->AssertUnaryOp(Round, values, "[3, 3, 4, 4, -3, -4, -4]");
+        break;
+      case RoundMode::HALF_TO_EVEN:
+        this->AssertUnaryOp(Round, values, "[3, 4, 4, 4, -3, -4, -4]");
+        break;
+      case RoundMode::HALF_TO_ODD:
+        this->AssertUnaryOp(Round, values, "[3, 3, 4, 5, -3, -3, -4]");
+        break;
+      case RoundMode::HALF_TOWARDS_ZERO:
+        this->AssertUnaryOp(Round, values, "[3, 3, 4, 4, -3, -3, -4]");
+        break;
+      case RoundMode::HALF_TOWARDS_INFINITY:
+        this->AssertUnaryOp(Round, values, "[3, 4, 4, 5, -3, -4, -4]");
+        break;
+      default:
+        this->AssertUnaryOpRaises(Round, "[1]", "invalid rounding mode");
+    }
+  }
+
+  // Test different round N-digits for NEAREST rounding mode
+  int round_ndigits[] = {-2, -1, 0, 1, 2};
+  this->SetRoundMode(RoundMode::NEAREST);
+  std::string values2("[320, 3.5, 3.075, 4.5, -3.212, -35, -3.073]");
+  for (auto round_ndigit : round_ndigits) {
+    this->SetRoundNdigits(round_ndigit);
+    this->AssertUnaryOp(Round, "[]", "[]");
+    this->AssertUnaryOp(Round, "[null, 0, Inf, -Inf, NaN, -NaN]",
+                        "[null, 0, Inf, -Inf, NaN, -NaN]");
+    if (round_ndigit == 0) {
+      this->AssertUnaryOp(Round, values2, "[320, 4, 3, 5, -3, -35, -3]");
+    } else if (round_ndigit == 1) {
+      this->AssertUnaryOp(Round, values2, "[320, 3.5, 3.1, 4.5, -3.2, -35, -3.1]");
+    } else if (round_ndigit == 2) {
+      this->AssertUnaryOp(Round, values2, "[320, 3.5, 3.08, 4.5, -3.21, -35, -3.07]");
+    } else if (round_ndigit == -2) {
+      this->AssertUnaryOp(Round, values2, "[300, 0, 0, 0, 0, 0, 0]");
+    } else if (round_ndigit == -1) {
+      this->AssertUnaryOp(Round, values2, "[320, 0, 0, 0, 0, -40, 0]");
+    }
+  }
+}
+
+TYPED_TEST(TestUnaryMRoundSigned, MRound) {
   // Test different rounding modes for rounding multiple of 1
-  RoundMode round_modes[] = {
-      RoundMode::TOWARDS_NEG_INFINITY,         RoundMode::TOWARDS_POS_INFINITY,      RoundMode::TOWARDS_ZERO,
-      RoundMode::TOWARDS_INFINITY, RoundMode::HALF_NEG_INFINITY,   RoundMode::HALF_POS_INFINITY,
-      RoundMode::HALF_TO_EVEN,     RoundMode::HALF_TO_ODD, RoundMode::HALF_TOWARDS_ZERO,
-      RoundMode::HALF_TOWARDS_INFINITY,
-  };
   this->SetRoundMultiple(1);
   std::string values("[0, 1, -13, -50, 115]");
-
-  for (auto round_mode : round_modes) {
+  for (auto round_mode : kRoundModes) {
     this->SetRoundMode(round_mode);
-
     this->options_.round_mode = round_mode;
     this->AssertUnaryOp(MRound, "[]", ArrayFromJSON(float64(), "[]"));
     this->AssertUnaryOp(MRound, "[null]", ArrayFromJSON(float64(), "[null]"));
-    this->AssertUnaryOp(MRound, this->MakeScalar(min),
-                        *arrow::MakeScalar(float64(), min));
-    this->AssertUnaryOp(MRound, this->MakeScalar(max),
-                        *arrow::MakeScalar(float64(), max));
     this->AssertUnaryOp(MRound, values, ArrayFromJSON(float64(), values));
   }
 
   // Test different round multiples for NEAREST rounding mode
-  double round_multiples[] = {-2.0, -0.05, 0.1, 0.0, 10.0, 100.0};
+  double round_multiples[] = {-2, -0.05, 0.1, 0, 10, 100};
   this->SetRoundMode(RoundMode::NEAREST);
-
   for (auto round_multiple : round_multiples) {
     this->SetRoundMultiple(round_multiple);
-
     this->AssertUnaryOp(MRound, "[]", ArrayFromJSON(float64(), "[]"));
     this->AssertUnaryOp(MRound, "[null]", ArrayFromJSON(float64(), "[null]"));
-
-    if (round_multiple == -2.0) {
+    if (round_multiple == -2) {
       this->AssertUnaryOp(MRound, values,
                           ArrayFromJSON(float64(), "[0, 2, -14, -50, 116]"));
     } else if (round_multiple == -0.05) {
@@ -1494,12 +1576,12 @@ TYPED_TEST(TestUnaryMRoundSigned, MRound) {
                           ArrayFromJSON(float64(), "[0, 1, -13, -50, 115]"));
     } else if (round_multiple == 0.1) {
       this->AssertUnaryOp(MRound, values, ArrayFromJSON(float64(), values));
-    } else if (round_multiple == 0.0) {
+    } else if (round_multiple == 0) {
       this->AssertUnaryOp(MRound, values, ArrayFromJSON(float64(), "[0, 0, 0, 0, 0]"));
-    } else if (round_multiple == 10.0) {
+    } else if (round_multiple == 10) {
       this->AssertUnaryOp(MRound, values,
                           ArrayFromJSON(float64(), "[0, 0, -10, -50, 120]"));
-    } else if (round_multiple == 100.0) {
+    } else if (round_multiple == 100) {
       this->AssertUnaryOp(MRound, values,
                           ArrayFromJSON(float64(), "[0, 0, 0, -100, 100]"));
     }
@@ -1507,55 +1589,36 @@ TYPED_TEST(TestUnaryMRoundSigned, MRound) {
 }
 
 TYPED_TEST(TestUnaryMRoundUnsigned, MRound) {
-  using CType = typename TestFixture::CType;
-  auto min = std::numeric_limits<CType>::min();
-  auto max = std::numeric_limits<CType>::max();
-
   // Test different rounding modes for rounding multiple of 1
-  RoundMode round_modes[] = {
-      RoundMode::TOWARDS_NEG_INFINITY,         RoundMode::TOWARDS_POS_INFINITY,      RoundMode::TOWARDS_ZERO,
-      RoundMode::TOWARDS_INFINITY, RoundMode::HALF_NEG_INFINITY,   RoundMode::HALF_POS_INFINITY,
-      RoundMode::HALF_TO_EVEN,     RoundMode::HALF_TO_ODD, RoundMode::HALF_TOWARDS_ZERO,
-      RoundMode::HALF_TOWARDS_INFINITY,
-  };
   this->SetRoundMultiple(1);
   std::string values("[0, 1, 13, 50, 115]");
-
-  for (auto round_mode : round_modes) {
+  for (auto round_mode : kRoundModes) {
     this->SetRoundMode(round_mode);
-
     this->AssertUnaryOp(MRound, "[]", ArrayFromJSON(float64(), "[]"));
     this->AssertUnaryOp(MRound, "[null]", ArrayFromJSON(float64(), "[null]"));
-    this->AssertUnaryOp(MRound, this->MakeScalar(min),
-                        *arrow::MakeScalar(float64(), min));
-    this->AssertUnaryOp(MRound, this->MakeScalar(max),
-                        *arrow::MakeScalar(float64(), max));
     this->AssertUnaryOp(MRound, values, ArrayFromJSON(float64(), values));
   }
 
   // Test different round multiples for NEAREST rounding mode
-  double round_multiples[] = {-2.0, -0.05, 0.1, 0.0, 10.0, 100.0};
+  double round_multiples[] = {-2, -0.05, 0.1, 0, 10, 100};
   this->SetRoundMode(RoundMode::NEAREST);
-
   for (auto round_multiple : round_multiples) {
     this->SetRoundMultiple(round_multiple);
-
     this->AssertUnaryOp(MRound, "[]", ArrayFromJSON(float64(), "[]"));
     this->AssertUnaryOp(MRound, "[null]", ArrayFromJSON(float64(), "[null]"));
-
-    if (round_multiple == -2.0) {
+    if (round_multiple == -2) {
       this->AssertUnaryOp(MRound, values,
                           ArrayFromJSON(float64(), "[0, 2, 14, 50, 116]"));
     } else if (round_multiple == -0.05) {
       this->AssertUnaryOp(MRound, values, ArrayFromJSON(float64(), values));
     } else if (round_multiple == 0.1) {
       this->AssertUnaryOp(MRound, values, ArrayFromJSON(float64(), values));
-    } else if (round_multiple == 0.0) {
+    } else if (round_multiple == 0) {
       this->AssertUnaryOp(MRound, values, ArrayFromJSON(float64(), "[0, 0, 0, 0, 0]"));
-    } else if (round_multiple == 10.0) {
+    } else if (round_multiple == 10) {
       this->AssertUnaryOp(MRound, values,
                           ArrayFromJSON(float64(), "[0, 0, 10, 50, 120]"));
-    } else if (round_multiple == 100.0) {
+    } else if (round_multiple == 100) {
       this->AssertUnaryOp(MRound, values,
                           ArrayFromJSON(float64(), "[0, 0, 0, 100, 100]"));
     }
@@ -1566,91 +1629,78 @@ TYPED_TEST(TestUnaryMRoundFloating, MRound) {
   using CType = typename TestFixture::CType;
   auto min = std::numeric_limits<CType>::lowest();
   auto max = std::numeric_limits<CType>::max();
-
   this->SetNansEqual(true);
 
   // Test different rounding modes for rounding multiple of 1
-  RoundMode round_modes[] = {
-      RoundMode::TOWARDS_NEG_INFINITY,         RoundMode::TOWARDS_POS_INFINITY,      RoundMode::TOWARDS_ZERO,
-      RoundMode::TOWARDS_INFINITY, RoundMode::HALF_NEG_INFINITY,   RoundMode::HALF_POS_INFINITY,
-      RoundMode::HALF_TO_EVEN,     RoundMode::HALF_TO_ODD, RoundMode::HALF_TOWARDS_ZERO,
-      RoundMode::HALF_TOWARDS_INFINITY,
-  };
   this->SetRoundMultiple(1);
   std::string values("[3.2, 3.5, 3.7, 4.5, -3.2, -3.5, -3.7]");
-
-  for (auto round_mode : round_modes) {
+  for (auto round_mode : kRoundModes) {
     this->SetRoundMode(round_mode);
-
     this->AssertUnaryOp(MRound, "[]", "[]");
     this->AssertUnaryOp(MRound, "[null, 0, Inf, -Inf, NaN, -NaN]",
                         "[null, 0, Inf, -Inf, NaN, -NaN]");
     this->AssertUnaryOp(MRound, MakeArray(min, max), MakeArray(min, max));
-
     switch (round_mode) {
       case RoundMode::TOWARDS_NEG_INFINITY:
-        this->AssertUnaryOp(MRound, values, "[3.0, 3.0, 3.0, 4.0, -4.0, -4.0, -4.0]");
+        this->AssertUnaryOp(MRound, values, "[3, 3, 3, 4, -4, -4, -4]");
         break;
       case RoundMode::TOWARDS_POS_INFINITY:
-        this->AssertUnaryOp(MRound, values, "[4.0, 4.0, 4.0, 5.0, -3.0, -3.0, -3.0]");
+        this->AssertUnaryOp(MRound, values, "[4, 4, 4, 5, -3, -3, -3]");
         break;
       case RoundMode::TOWARDS_ZERO:
-        this->AssertUnaryOp(MRound, values, "[3.0, 3.0, 3.0, 4.0, -3.0, -3.0, -3.0]");
+        this->AssertUnaryOp(MRound, values, "[3, 3, 3, 4, -3, -3, -3]");
         break;
       case RoundMode::TOWARDS_INFINITY:
-        this->AssertUnaryOp(MRound, values, "[4.0, 4.0, 4.0, 5.0, -4.0, -4.0, -4.0]");
+        this->AssertUnaryOp(MRound, values, "[4, 4, 4, 5, -4, -4, -4]");
         break;
       case RoundMode::HALF_POS_INFINITY:
-        this->AssertUnaryOp(MRound, values, "[3.0, 4.0, 4.0, 5.0, -3.0, -3.0, -4.0]");
+        this->AssertUnaryOp(MRound, values, "[3, 4, 4, 5, -3, -3, -4]");
         break;
       case RoundMode::HALF_NEG_INFINITY:
-        this->AssertUnaryOp(MRound, values, "[3.0, 3.0, 4.0, 4.0, -3.0, -4.0, -4.0]");
+        this->AssertUnaryOp(MRound, values, "[3, 3, 4, 4, -3, -4, -4]");
         break;
       case RoundMode::HALF_TO_EVEN:
-        this->AssertUnaryOp(MRound, values, "[3.0, 4.0, 4.0, 4.0, -3.0, -4.0, -4.0]");
+        this->AssertUnaryOp(MRound, values, "[3, 4, 4, 4, -3, -4, -4]");
         break;
       case RoundMode::HALF_TO_ODD:
-        this->AssertUnaryOp(MRound, values, "[3.0, 3.0, 4.0, 5.0, -3.0, -3.0, -4.0]");
+        this->AssertUnaryOp(MRound, values, "[3, 3, 4, 5, -3, -3, -4]");
         break;
       case RoundMode::HALF_TOWARDS_ZERO:
-        this->AssertUnaryOp(MRound, values, "[3.0, 3.0, 4.0, 4.0, -3.0, -3.0, -4.0]");
+        this->AssertUnaryOp(MRound, values, "[3, 3, 4, 4, -3, -3, -4]");
         break;
       case RoundMode::HALF_TOWARDS_INFINITY:
-        this->AssertUnaryOp(MRound, values, "[3.0, 4.0, 4.0, 5.0, -3.0, -4.0, -4.0]");
+        this->AssertUnaryOp(MRound, values, "[3, 4, 4, 5, -3, -4, -4]");
         break;
       default:
-        this->AssertUnaryOpRaises(MRound, "[1.0]", "invalid rounding mode");
+        this->AssertUnaryOpRaises(MRound, "[1]", "invalid rounding mode");
     }
   }
 
   // Test different round multiples for NEAREST rounding mode
-  double round_multiples[] = {-2.0, -0.05, 0.1, 0.0, 10.0, 100.0};
+  double round_multiples[] = {-2, -0.05, 0.1, 0, 10, 100};
   this->SetRoundMode(RoundMode::NEAREST);
-  std::string values2("[320, 3.5, 3.07, 4.5, -3.2, -35, -3.07]");
-
+  std::string values2("[320, 3.5, 3.075, 4.5, -3.212, -35, -3.073]");
   for (auto round_multiple : round_multiples) {
     this->SetRoundMultiple(round_multiple);
-
     this->AssertUnaryOp(MRound, "[]", "[]");
     this->AssertUnaryOp(MRound, "[null]", "[null]");
-    if (round_multiple == 0.0) {
-      this->AssertUnaryOp(MRound, "[0, Inf, -Inf, NaN, -NaN]", "[0, 0, 0, 0, 0]");
+    this->AssertUnaryOp(MRound, "[NaN, -NaN]", "[NaN, -NaN]");
+    if (round_multiple == 0) {
+      this->AssertUnaryOp(MRound, "[0, Inf, -Inf]", "[0, 0, 0]");
     } else {
-      this->AssertUnaryOp(MRound, "[0, Inf, -Inf, NaN, -NaN]",
-                          "[0, Inf, -Inf, NaN, -NaN]");
+      this->AssertUnaryOp(MRound, "[0, Inf, -Inf]", "[0, Inf, -Inf]");
     }
-
-    if (round_multiple == -2.0) {
+    if (round_multiple == -2) {
       this->AssertUnaryOp(MRound, values2, "[320, 4, 4, 4, -4, -36, -4]");
     } else if (round_multiple == -0.05) {
-      this->AssertUnaryOp(MRound, values2, "[320, 3.5, 3.05, 4.5, -3.2, -35, -3.05]");
+      this->AssertUnaryOp(MRound, values2, "[320, 3.5, 3.1, 4.5, -3.2, -35, -3.05]");
     } else if (round_multiple == 0.1) {
       this->AssertUnaryOp(MRound, values2, "[320, 3.5, 3.1, 4.5, -3.2, -35, -3.1]");
-    } else if (round_multiple == 0.0) {
+    } else if (round_multiple == 0) {
       this->AssertUnaryOp(MRound, values2, "[0, 0, 0, 0, 0, 0, 0]");
-    } else if (round_multiple == 10.0) {
+    } else if (round_multiple == 10) {
       this->AssertUnaryOp(MRound, values2, "[320, 0, 0, 0, 0, -40, 0]");
-    } else if (round_multiple == 100.0) {
+    } else if (round_multiple == 100) {
       this->AssertUnaryOp(MRound, values2, "[300, 0, 0, 0, 0, 0, 0]");
     }
   }
