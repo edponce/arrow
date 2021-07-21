@@ -21,7 +21,6 @@
 #include <utility>
 
 #include "arrow/compute/api_scalar.h"
-#include "arrow/compute/kernels/codegen_internal.h"
 #include "arrow/compute/kernels/common.h"
 #include "arrow/compute/kernels/util_internal.h"
 #include "arrow/type.h"
@@ -869,7 +868,7 @@ struct RoundHelper {
 // Specializations of rounding implementations for kernels
 template <typename T, RoundMode RndMode>
 struct RoundUtils {
-  static enable_if_floating_point<T> Round(T) { return T(0); };
+  static enable_if_floating_point<T> Round(T) { return T(0); }
 };
 
 template <typename T>
@@ -1376,7 +1375,7 @@ std::shared_ptr<ScalarFunction> MakeUnaryArithmeticFunctionNotNull(
 
 // Like MakeUnaryArithmeticFunction, but for unary rounding functions that control
 // kernel dispatch based on RoundMode, only on non-null output.
-template <template <RoundMode RndMode> typename Op, typename Opts>
+template <template <RoundMode RndMode> class Op, typename Opts>
 std::shared_ptr<ScalarFunction> MakeUnaryRoundFunction(
     std::string name, const FunctionDoc* doc,
     const FunctionOptions* default_options = NULLPTR, KernelInit init = NULLPTR) {
