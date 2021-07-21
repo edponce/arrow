@@ -1776,14 +1776,14 @@ const FunctionDoc trunc_doc{
     {"x"}};
 
 const FunctionDoc round_doc{
-    "Round the arguments element-wise",
+    "Round the arguments to a given precision element-wise",
     ("Options are used to control the rounding mode and number of digits.\n"
      "Default behavior is to round to nearest integer."),
     {"x"},
     "RoundOptions"};
 
 const FunctionDoc mround_doc{
-    "Round the arguments element-wise",
+    "Round the arguments to a given multiple element-wise",
     ("Options are used to control the rounding mode and rounding multiple.\n"
      "Default behavior is to round to nearest integer."),
     {"x"},
