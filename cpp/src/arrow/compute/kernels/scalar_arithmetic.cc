@@ -820,7 +820,8 @@ struct Log1pChecked {
 
 struct Floor {
   template <typename T, typename Arg>
-  static constexpr enable_if_floating_point<Arg, T> Call(KernelContext*, Arg arg, Status*) {
+  static constexpr enable_if_floating_point<Arg, T> Call(KernelContext*, Arg arg,
+                                                         Status*) {
     static_assert(std::is_same<T, Arg>::value, "");
     return std::floor(arg);
   }
@@ -828,7 +829,8 @@ struct Floor {
 
 struct Ceil {
   template <typename T, typename Arg>
-  static constexpr enable_if_floating_point<Arg, T> Call(KernelContext*, Arg arg, Status*) {
+  static constexpr enable_if_floating_point<Arg, T> Call(KernelContext*, Arg arg,
+                                                         Status*) {
     static_assert(std::is_same<T, Arg>::value, "");
     return std::ceil(arg);
   }
@@ -836,7 +838,8 @@ struct Ceil {
 
 struct Trunc {
   template <typename T, typename Arg>
-  static constexpr enable_if_floating_point<Arg, T> Call(KernelContext*, Arg arg, Status*) {
+  static constexpr enable_if_floating_point<Arg, T> Call(KernelContext*, Arg arg,
+                                                         Status*) {
     static_assert(std::is_same<T, Arg>::value, "");
     return std::trunc(arg);
   }
@@ -871,23 +874,17 @@ struct RoundUtils {
 
 template <typename T>
 struct RoundUtils<T, RoundMode::TOWARDS_NEG_INFINITY> {
-  static constexpr enable_if_floating_point<T> Round(T val) {
-    return std::floor(val);
-  }
+  static constexpr enable_if_floating_point<T> Round(T val) { return std::floor(val); }
 };
 
 template <typename T>
 struct RoundUtils<T, RoundMode::TOWARDS_POS_INFINITY> {
-  static constexpr enable_if_floating_point<T> Round(T val) {
-    return std::ceil(val);
-  }
+  static constexpr enable_if_floating_point<T> Round(T val) { return std::ceil(val); }
 };
 
 template <typename T>
 struct RoundUtils<T, RoundMode::TOWARDS_ZERO> {
-  static constexpr enable_if_floating_point<T> Round(T val) {
-    return std::trunc(val);
-  }
+  static constexpr enable_if_floating_point<T> Round(T val) { return std::trunc(val); }
 };
 
 template <typename T>
@@ -946,9 +943,7 @@ struct RoundUtils<T, RoundMode::HALF_TOWARDS_ZERO> {
 
 template <typename T>
 struct RoundUtils<T, RoundMode::HALF_TOWARDS_INFINITY> {
-  static constexpr enable_if_floating_point<T> Round(T val) {
-    return std::round(val);
-  }
+  static constexpr enable_if_floating_point<T> Round(T val) { return std::round(val); }
 };
 
 template <RoundMode RndMode>
@@ -958,7 +953,7 @@ struct MRound {
     static_assert(std::is_same<T, Arg>::value, "");
     auto options = OptionsWrapper<MRoundOptions>::Get(ctx);
     if (std::isnan(arg)) {
-        return arg;
+      return arg;
     }
     const auto mult = std::fabs(T(options.multiple));
     return (mult == T(0)) ? T(0) : (RoundUtils<T, RndMode>::Round(arg / mult) * mult);
@@ -1385,27 +1380,33 @@ template <template <RoundMode RndMode> typename Op, typename Opts>
 std::shared_ptr<ScalarFunction> MakeUnaryRoundFunction(
     std::string name, const FunctionDoc* doc,
     const FunctionOptions* default_options = NULLPTR, KernelInit init = NULLPTR) {
-  auto func =
-      std::make_shared<ArithmeticFloatingPointFunction>(name, Arity::Unary(), doc, default_options);
+  auto func = std::make_shared<ArithmeticFloatingPointFunction>(name, Arity::Unary(), doc,
+                                                                default_options);
   for (const auto& ty : FloatingPointTypes()) {
     // Order of ArrayKernelExec w.r.t. RoundMode needs to follow the order of
     // values in RoundMode definition (see api_scalar.h) because they are used as
     // indexing values.
     std::vector<ArrayKernelExec> execs = {
-      GenerateArithmeticFloatingPoint<ScalarUnary, Op<RoundMode::TOWARDS_NEG_INFINITY>>(ty),
-      GenerateArithmeticFloatingPoint<ScalarUnary, Op<RoundMode::TOWARDS_POS_INFINITY>>(ty),
-      GenerateArithmeticFloatingPoint<ScalarUnary, Op<RoundMode::TOWARDS_ZERO>>(ty),
-      GenerateArithmeticFloatingPoint<ScalarUnary, Op<RoundMode::TOWARDS_INFINITY>>(ty),
-      GenerateArithmeticFloatingPoint<ScalarUnary, Op<RoundMode::HALF_NEG_INFINITY>>(ty),
-      GenerateArithmeticFloatingPoint<ScalarUnary, Op<RoundMode::HALF_POS_INFINITY>>(ty),
-      GenerateArithmeticFloatingPoint<ScalarUnary, Op<RoundMode::HALF_TOWARDS_ZERO>>(ty),
-      GenerateArithmeticFloatingPoint<ScalarUnary, Op<RoundMode::HALF_TOWARDS_INFINITY>>(ty),
-      GenerateArithmeticFloatingPoint<ScalarUnary, Op<RoundMode::HALF_TO_EVEN>>(ty),
-      GenerateArithmeticFloatingPoint<ScalarUnary, Op<RoundMode::HALF_TO_ODD>>(ty),
+        GenerateArithmeticFloatingPoint<ScalarUnary, Op<RoundMode::TOWARDS_NEG_INFINITY>>(
+            ty),
+        GenerateArithmeticFloatingPoint<ScalarUnary, Op<RoundMode::TOWARDS_POS_INFINITY>>(
+            ty),
+        GenerateArithmeticFloatingPoint<ScalarUnary, Op<RoundMode::TOWARDS_ZERO>>(ty),
+        GenerateArithmeticFloatingPoint<ScalarUnary, Op<RoundMode::TOWARDS_INFINITY>>(ty),
+        GenerateArithmeticFloatingPoint<ScalarUnary, Op<RoundMode::HALF_NEG_INFINITY>>(
+            ty),
+        GenerateArithmeticFloatingPoint<ScalarUnary, Op<RoundMode::HALF_POS_INFINITY>>(
+            ty),
+        GenerateArithmeticFloatingPoint<ScalarUnary, Op<RoundMode::HALF_TOWARDS_ZERO>>(
+            ty),
+        GenerateArithmeticFloatingPoint<ScalarUnary,
+                                        Op<RoundMode::HALF_TOWARDS_INFINITY>>(ty),
+        GenerateArithmeticFloatingPoint<ScalarUnary, Op<RoundMode::HALF_TO_EVEN>>(ty),
+        GenerateArithmeticFloatingPoint<ScalarUnary, Op<RoundMode::HALF_TO_ODD>>(ty),
     };
     auto exec = [execs](KernelContext* ctx, const ExecBatch& batch, Datum* out) {
-        RoundMode round_mode = OptionsWrapper<Opts>::Get(ctx).round_mode;
-        return execs[int(round_mode)](ctx, batch, out);
+      RoundMode round_mode = OptionsWrapper<Opts>::Get(ctx).round_mode;
+      return execs[int(round_mode)](ctx, batch, out);
     };
     DCHECK_OK(func->AddKernel({ty}, ty, exec, init));
   }

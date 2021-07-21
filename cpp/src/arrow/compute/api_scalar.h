@@ -60,9 +60,9 @@ enum class RoundMode {
   // so starting value is 0 and continue consecutively.
   TOWARDS_NEG_INFINITY = 0,  // equivalent to floor
   DOWNWARD = TOWARDS_NEG_INFINITY,
-  TOWARDS_POS_INFINITY,      // equivalent to ceiling
+  TOWARDS_POS_INFINITY,  // equivalent to ceiling
   UPWARD = TOWARDS_POS_INFINITY,
-  TOWARDS_ZERO,              // equivalent to truncate
+  TOWARDS_ZERO,  // equivalent to truncate
   TOWARDS_INFINITY,
   HALF_NEG_INFINITY,
   HALF_DOWN = HALF_NEG_INFINITY,

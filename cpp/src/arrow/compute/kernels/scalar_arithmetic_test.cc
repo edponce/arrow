@@ -1401,16 +1401,11 @@ TYPED_TEST(TestUnaryArithmeticFloating, AbsoluteValue) {
 }
 
 constexpr std::initializer_list<RoundMode> kRoundModes = {
-  RoundMode::TOWARDS_NEG_INFINITY,
-  RoundMode::TOWARDS_POS_INFINITY,
-  RoundMode::TOWARDS_ZERO,
-  RoundMode::TOWARDS_INFINITY,
-  RoundMode::HALF_NEG_INFINITY,
-  RoundMode::HALF_POS_INFINITY,
-  RoundMode::HALF_TOWARDS_ZERO,
-  RoundMode::HALF_TOWARDS_INFINITY,
-  RoundMode::HALF_TO_EVEN,
-  RoundMode::HALF_TO_ODD,
+    RoundMode::TOWARDS_NEG_INFINITY, RoundMode::TOWARDS_POS_INFINITY,
+    RoundMode::TOWARDS_ZERO,         RoundMode::TOWARDS_INFINITY,
+    RoundMode::HALF_NEG_INFINITY,    RoundMode::HALF_POS_INFINITY,
+    RoundMode::HALF_TOWARDS_ZERO,    RoundMode::HALF_TOWARDS_INFINITY,
+    RoundMode::HALF_TO_EVEN,         RoundMode::HALF_TO_ODD,
 };
 
 TYPED_TEST(TestUnaryRoundSigned, Round) {
@@ -1466,11 +1461,9 @@ TYPED_TEST(TestUnaryRoundUnsigned, Round) {
     if (round_ndigit >= 0) {
       this->AssertUnaryOp(Round, values, ArrayFromJSON(float64(), values));
     } else if (round_ndigit == -2) {
-      this->AssertUnaryOp(Round, values,
-                          ArrayFromJSON(float64(), "[0, 0, 0, 100, 100]"));
+      this->AssertUnaryOp(Round, values, ArrayFromJSON(float64(), "[0, 0, 0, 100, 100]"));
     } else if (round_ndigit == -1) {
-      this->AssertUnaryOp(Round, values,
-                          ArrayFromJSON(float64(), "[0, 0, 10, 50, 120]"));
+      this->AssertUnaryOp(Round, values, ArrayFromJSON(float64(), "[0, 0, 10, 50, 120]"));
     }
   }
 }
