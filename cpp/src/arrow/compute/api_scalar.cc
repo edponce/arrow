@@ -53,6 +53,7 @@ struct EnumTraits<compute::JoinOptions::NullHandlingBehavior>
     return "<INVALID>";
   }
 };
+
 template <>
 struct EnumTraits<TimeUnit::type>
     : BasicEnumTraits<TimeUnit::type, TimeUnit::type::SECOND, TimeUnit::type::MILLI,
@@ -72,6 +73,7 @@ struct EnumTraits<TimeUnit::type>
     return "<INVALID>";
   }
 };
+
 template <>
 struct EnumTraits<compute::CompareOperator>
     : BasicEnumTraits<
@@ -98,6 +100,43 @@ struct EnumTraits<compute::CompareOperator>
     return "<INVALID>";
   }
 };
+
+template <>
+struct EnumTraits<compute::RoundMode>
+    : BasicEnumTraits<
+          compute::RoundMode, compute::RoundMode::TOWARDS_NEG_INFINITY,
+          compute::RoundMode::TOWARDS_POS_INFINITY, compute::RoundMode::TOWARDS_ZERO,
+          compute::RoundMode::TOWARDS_INFINITY, compute::RoundMode::HALF_NEG_INFINITY,
+          compute::RoundMode::HALF_POS_INFINITY, compute::RoundMode::HALF_TOWARDS_ZERO,
+          compute::RoundMode::HALF_TOWARDS_INFINITY, compute::RoundMode::HALF_TO_EVEN,
+          compute::RoundMode::HALF_TO_ODD> {
+  static std::string name() { return "compute::RoundMode"; }
+  static std::string value_name(compute::RoundMode value) {
+    switch (value) {
+      case compute::RoundMode::TOWARDS_NEG_INFINITY:
+        return "TOWARDS_NEG_INFINITY";
+      case compute::RoundMode::TOWARDS_POS_INFINITY:
+        return "TOWARDS_POS_INFINITY";
+      case compute::RoundMode::TOWARDS_ZERO:
+        return "TOWARDS_ZERO";
+      case compute::RoundMode::TOWARDS_INFINITY:
+        return "TOWARDS_INFINITY";
+      case compute::RoundMode::HALF_NEG_INFINITY:
+        return "HALF_NEG_INFINITY";
+      case compute::RoundMode::HALF_POS_INFINITY:
+        return "HALF_POS_INFINITY";
+      case compute::RoundMode::HALF_TOWARDS_ZERO:
+        return "HALF_TOWARDS_ZERO";
+      case compute::RoundMode::HALF_TOWARDS_INFINITY:
+        return "HALF_TOWARDS_INFINITY";
+      case compute::RoundMode::HALF_TO_EVEN:
+        return "HALF_TO_EVEN";
+      case compute::RoundMode::HALF_TO_ODD:
+        return "HALF_TO_ODD";
+    }
+    return "<INVALID>";
+  }
+};
 }  // namespace internal
 
 namespace compute {
@@ -115,6 +154,12 @@ static auto kArithmeticOptionsType = GetFunctionOptionsType<ArithmeticOptions>(
 static auto kElementWiseAggregateOptionsType =
     GetFunctionOptionsType<ElementWiseAggregateOptions>(
         DataMember("skip_nulls", &ElementWiseAggregateOptions::skip_nulls));
+static auto kRoundOptionsType = GetFunctionOptionsType<RoundOptions>(
+    DataMember("ndigits", &RoundOptions::ndigits),
+    DataMember("round_mode", &RoundOptions::round_mode));
+static auto kMRoundOptionsType = GetFunctionOptionsType<MRoundOptions>(
+    DataMember("multiple", &MRoundOptions::multiple),
+    DataMember("round_mode", &MRoundOptions::round_mode));
 static auto kJoinOptionsType = GetFunctionOptionsType<JoinOptions>(
     DataMember("null_handling", &JoinOptions::null_handling),
     DataMember("null_replacement", &JoinOptions::null_replacement));
@@ -170,6 +215,18 @@ ElementWiseAggregateOptions::ElementWiseAggregateOptions(bool skip_nulls)
     : FunctionOptions(internal::kElementWiseAggregateOptionsType),
       skip_nulls(skip_nulls) {}
 constexpr char ElementWiseAggregateOptions::kTypeName[];
+
+RoundOptions::RoundOptions(int64_t ndigits, RoundMode round_mode)
+    : FunctionOptions(internal::kRoundOptionsType),
+      ndigits(ndigits),
+      round_mode(round_mode) {}
+constexpr char RoundOptions::kTypeName[];
+
+MRoundOptions::MRoundOptions(double multiple, RoundMode round_mode)
+    : FunctionOptions(internal::kMRoundOptionsType),
+      multiple(multiple),
+      round_mode(round_mode) {}
+constexpr char MRoundOptions::kTypeName[];
 
 JoinOptions::JoinOptions(NullHandlingBehavior null_handling, std::string null_replacement)
     : FunctionOptions(internal::kJoinOptionsType),
@@ -285,6 +342,8 @@ namespace internal {
 void RegisterScalarOptions(FunctionRegistry* registry) {
   DCHECK_OK(registry->AddFunctionOptionsType(kArithmeticOptionsType));
   DCHECK_OK(registry->AddFunctionOptionsType(kElementWiseAggregateOptionsType));
+  DCHECK_OK(registry->AddFunctionOptionsType(kRoundOptionsType));
+  DCHECK_OK(registry->AddFunctionOptionsType(kMRoundOptionsType));
   DCHECK_OK(registry->AddFunctionOptionsType(kJoinOptionsType));
   DCHECK_OK(registry->AddFunctionOptionsType(kMatchSubstringOptionsType));
   DCHECK_OK(registry->AddFunctionOptionsType(kSplitOptionsType));

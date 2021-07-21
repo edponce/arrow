@@ -861,9 +861,9 @@ struct RoundHelper {
 };
 
 // Specializations of rounding implementations for kernels
-template <typename T, RoundMode M>
+template <typename T, RoundMode RndMode>
 struct RoundUtils {
-    static enable_if_floating_point<T> Round(T) { return T(0); };
+  static enable_if_floating_point<T> Round(T) { return T(0); };
 };
 
 template <typename T>
@@ -1414,7 +1414,7 @@ std::shared_ptr<ScalarFunction> MakeUnaryRoundFunction(
   for (const auto& ty : NumericTypes()) {
     auto out_ty = is_integer(ty->id()) ? float64() : ty;
     // Note: Order of rounding modes needs to follow the order of unique
-    // values in enum definition (see api_scalar.h) because they are use as
+    // values in enum definition (see api_scalar.h) because they are used as
     // indexing values.
     std::vector<ArrayKernelExec> execs = {
       GenerateArithmeticWithFloatOutType<ScalarUnary, Op<RoundMode::TOWARDS_NEG_INFINITY>>(ty),
@@ -1815,7 +1815,7 @@ const FunctionDoc mround_doc{
     ("Options are used to control the rounding mode and rounding multiple.\n"
      "Default behavior is to round to nearest integer."),
     {"x"},
-    "RoundOptions"};
+    "MRoundOptions"};
 }  // namespace
 
 void RegisterScalarArithmetic(FunctionRegistry* registry) {

@@ -81,21 +81,21 @@ enum class RoundMode {
 
 class ARROW_EXPORT RoundOptions : public FunctionOptions {
  public:
-  explicit RoundOptions(int32_t ndigits = 1,
+  explicit RoundOptions(int64_t ndigits = 1,
                         RoundMode round_mode = RoundMode::HALF_TO_EVEN);
   constexpr static char const kTypeName[] = "RoundOptions";
   static RoundOptions Defaults() { return RoundOptions(); }
-  int32_t ndigits;
+  int64_t ndigits;
   RoundMode round_mode;
 };
 
 class ARROW_EXPORT MRoundOptions : public FunctionOptions {
  public:
-  explicit MRoundOptions(float multiple = 1.0F,
+  explicit MRoundOptions(double multiple = 1.0,
                          RoundMode round_mode = RoundMode::HALF_TO_EVEN);
   constexpr static char const kTypeName[] = "MRoundOptions";
   static MRoundOptions Defaults() { return MRoundOptions(); }
-  float multiple;
+  double multiple;
   RoundMode round_mode;
 };
 
