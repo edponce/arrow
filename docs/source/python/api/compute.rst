@@ -77,14 +77,16 @@ Bit-wise operations do not offer (or need) a checked variant.
 Rounding Functions
 ------------------
 
-Rounding functions convert a numeric input into an approximate value with a
-simpler representation based on the rounding strategy.
+Rounding functions displace numeric inputs to an approximate value with a simpler
+representation based on the rounding strategy.
 
 .. autosummary::
    :toctree: ../generated/
 
    ceil
    floor
+   mround
+   round
    trunc
 
 Logarithmic Functions
