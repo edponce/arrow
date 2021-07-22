@@ -370,63 +370,70 @@ representation based on the rounding strategy.
 +---------------+------------+-------------+------------------+-------------------------+--------+
 
 * \(1) Output value is a 64-bit floating-point for integral inputs and the
-  retains the same type for floating-point inputs.  By default rounding functions
-  displace a value to the nearest integer using a "round half-to-even" to resolve
-  ties.  Options are available to control the rounding strategy.
-* \(2) The ``multiple`` option specifies the rounding scale.  Only the absolute
-  value of the ``rounding multiple`` is used, that is, its sign is ignored.
-  For example, 100 corresponds to rounding to the nearest multiple of 100
-  (zeroing the ones and tens digits).
-* \(3) The ``ndigits`` option specifies the rounding precision in terms of number
-  of digits.  A negative value corresponds to digits in the non-fractional part.
+  retains the same type for floating-point inputs.  By default rounding
+  functions displace a value to the nearest integer using a "round half-to-even"
+  to resolve ties.  Options are available to control the rounding strategy.
+  Both ``round`` and ``mround`` have the ``round_mode`` option to set the
+  rounding mode.
+* \(2) Round to a multiple where the ``multiple`` option of :struct:`MRoundOptions`
+  specifies the rounding scale.  Only the absolute value of the rounding
+  multiple is used, that is, its sign is ignored.  For example, 100 corresponds
+  to rounding to the nearest multiple of 100 (zeroing the ones and tens digits).
+* \(3) Round to a number of digits where the ``ndigits`` option of
+  :struct:`RoundOptions` specifies the rounding precision in terms of number of
+  digits.  A negative value corresponds to digits in the non-fractional part.
   For example, -2 corresponds to rounding to the nearest multiple of 100
   (zeroing the ones and tens digits).
 
-The following tables present the rounding strategies along with examples.
+The following tables present the rounding operations performed for various
+rounding options and modes.
 
-+-------------------------+----------------------------------+
-| Round mode              | Description/Examples             |
-+=========================+==================================+
-| | TOWARDS_NEG_INFINITY  | | Equivalent to ``floor(x)``     |
-| | DOWNWARD              | | 3.7 -> 3, -3.2 -> -4           |
-+-------------------------+----------------------------------+
-| | TOWARDS_POS_INFINITY  | | Equivalent to ``ceil(x)``      |
-| | UPWARD                | | 3.2 -> 4, -3.7 -> -3           |
-+-------------------------+----------------------------------+
-| | TOWARDS_ZERO          | | Equivalent to ``trunc(x)``     |
-| |                       | | 3.7 -> 3, -3.7 -> -3           |
-+-------------------------+----------------------------------+
-| TOWARDS_INFINITY        | 3.2 -> 4, -3.2 -> -4             |
-+-------------------------+----------------------------------+
-| | HALF_UP               | | 3.5 -> 4, 4.5 -> 5, -3.5 -> -3 |
-| | HALF_POS_INFINITY     | |                                |
-+-------------------------+----------------------------------+
-| | HALF_DOWN             | | 3.5 -> 3, 4.5 -> 4, -3.5 -> -4 |
-| | HALF_NEG_INFINITY     | |                                |
-+-------------------------+----------------------------------+
-| HALF_TO_EVEN            | 3.5 -> 4, 4.5 -> 4, -3.5 -> -4   |
-+-------------------------+----------------------------------+
-| HALF_TO_ODD             | 3.5 -> 3, 4.5 -> 5, -3.5 -> -3   |
-+-------------------------+----------------------------------+
-| HALF_TOWARDS_ZERO       | 3.5 -> 3, 4.5 -> 4, -3.5 -> -3   |
-+-------------------------+----------------------------------+
-| | HALF_TOWARDS_INFINITY | | Round to nearest integer       |
-| | NEAREST               | | 3.5 -> 4, 4.5 -> 5, -3.5 -> -4 |
-+-------------------------+----------------------------------+
++--------------------+---------------+-------------------------------+
+| Round ``multiple`` | Round ``ndigits`` | Operation performed       |
++====================+===================+===========================+
+| 1.0                | 0                 | Round to integer          |
++--------------------+-------------------+---------------------------+
+| 0.001              | 3                 | Round to 3 decimal places |
++--------------------+-------------------+---------------------------+
+| 10                 | -1                | Round to multiple of 10   |
++--------------------+-------------------+---------------------------+
+| 2                  | NA                | Round to multiple of 2    |
++--------------------+-------------------+---------------------------+
+| 0                  | NA                | Returns 0                 |
++--------------------+-------------------+---------------------------+
 
-+----------------+---------------+----------------------------+
-| Round multiple | Round ndigits | Description                |
-+================================+============================+
-| 1.0            | 0             | Round to integer           |
-+----------------+--------------------------------------------+
-| 0.001          | 3             | Round to 3 decimal places  |
-+----------------+--------------------------------------------+
-| 10             | -1            | Round to multiple of 10    |
-+----------------+--------------------------------------------+
-| 2              | NA            | Round to multiple of 2     |
-+----------------+--------------------------------------------+
-| 0              | NA            | Returns 0                  |
-+----------------+--------------------------------------------+
+General rounding modes are prefixed with TOWARDS and tie-breaker modes are
+prefixed with HALF.
+
++-----------------------+--------------------------------+
+| ``round_mode``        | Operation performed            |
++=======================+================================+
+| TOWARDS_NEG_INFINITY  | Equivalent to ``floor(x)``     |
+|                       | 3.7 -> 3, -3.2 -> -4           |
++-----------------------+--------------------------------+
+| TOWARDS_POS_INFINITY  | Equivalent to ``ceil(x)``      |
+|                       | 3.2 -> 4, -3.7 -> -3           |
++-----------------------+--------------------------------+
+| TOWARDS_ZERO          | Equivalent to ``trunc(x)``     |
+|                       | 3.7 -> 3, -3.7 -> -3           |
++-----------------------+--------------------------------+
+| TOWARDS_INFINITY      | 3.2 -> 4, -3.2 -> -4           |
++-----------------------+--------------------------------+
+| HALF_NEG_INFINITY     | 3.5 -> 3, 4.5 -> 4, -3.5 -> -4 |
+|                       |                                |
++-----------------------+--------------------------------+
+| HALF_POS_INFINITY     | 3.5 -> 4, 4.5 -> 5, -3.5 -> -3 |
+|                       |                                |
++-----------------------+--------------------------------+
+| HALF_TOWARDS_ZERO     | 3.5 -> 3, 4.5 -> 4, -3.5 -> -3 |
++-----------------------+--------------------------------+
+| HALF_TOWARDS_INFINITY | Round to nearest integer       |
+|                       | 3.5 -> 4, 4.5 -> 5, -3.5 -> -4 |
++-----------------------+--------------------------------+
+| HALF_TO_EVEN          | 3.5 -> 4, 4.5 -> 4, -3.5 -> -4 |
++-----------------------+--------------------------------+
+| HALF_TO_ODD           | 3.5 -> 3, 4.5 -> 5, -3.5 -> -3 |
++-----------------------+--------------------------------+
 
 Logarithmic functions
 ~~~~~~~~~~~~~~~~~~~~~
