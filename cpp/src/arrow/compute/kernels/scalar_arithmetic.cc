@@ -817,33 +817,6 @@ struct Log1pChecked {
   }
 };
 
-struct Floor {
-  template <typename T, typename Arg>
-  static constexpr enable_if_floating_point<Arg, T> Call(KernelContext*, Arg arg,
-                                                         Status*) {
-    static_assert(std::is_same<T, Arg>::value, "");
-    return std::floor(arg);
-  }
-};
-
-struct Ceil {
-  template <typename T, typename Arg>
-  static constexpr enable_if_floating_point<Arg, T> Call(KernelContext*, Arg arg,
-                                                         Status*) {
-    static_assert(std::is_same<T, Arg>::value, "");
-    return std::ceil(arg);
-  }
-};
-
-struct Trunc {
-  template <typename T, typename Arg>
-  static constexpr enable_if_floating_point<Arg, T> Call(KernelContext*, Arg arg,
-                                                         Status*) {
-    static_assert(std::is_same<T, Arg>::value, "");
-    return std::trunc(arg);
-  }
-};
-
 struct RoundHelper {
   template <typename T, enable_if_t<std::is_floating_point<T>::value, bool> = true>
   static bool ApproxEqual(const T x, const T y, const int ulp = 7) {
@@ -967,6 +940,33 @@ struct Round {
     auto options = OptionsWrapper<RoundOptions>::Get(ctx);
     const auto mult = std::pow(T(10), T(-options.ndigits));
     return RoundUtils<T, RndMode>::Round(arg / mult) * mult;
+  }
+};
+
+struct Floor {
+  template <typename T, typename Arg>
+  static constexpr enable_if_floating_point<Arg, T> Call(KernelContext*, Arg arg,
+                                                         Status*) {
+    static_assert(std::is_same<T, Arg>::value, "");
+    return RoundUtils<T, RoundMode::TOWARDS_NEG_INFINITY>::Round(arg);
+  }
+};
+
+struct Ceil {
+  template <typename T, typename Arg>
+  static constexpr enable_if_floating_point<Arg, T> Call(KernelContext*, Arg arg,
+                                                         Status*) {
+    static_assert(std::is_same<T, Arg>::value, "");
+    return RoundUtils<T, RoundMode::TOWARDS_POS_INFINITY>::Round(arg);
+  }
+};
+
+struct Trunc {
+  template <typename T, typename Arg>
+  static constexpr enable_if_floating_point<Arg, T> Call(KernelContext*, Arg arg,
+                                                         Status*) {
+    static_assert(std::is_same<T, Arg>::value, "");
+    return RoundUtils<T, RoundMode::TOWARDS_ZERO>::Round(arg);
   }
 };
 
