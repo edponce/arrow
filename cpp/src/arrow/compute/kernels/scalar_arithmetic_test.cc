@@ -1400,7 +1400,7 @@ TYPED_TEST(TestUnaryArithmeticFloating, AbsoluteValue) {
   }
 }
 
-constexpr std::initializer_list<RoundMode> kRoundModes = {
+std::initializer_list<RoundMode> kRoundModes = {
     RoundMode::TOWARDS_NEG_INFINITY, RoundMode::TOWARDS_POS_INFINITY,
     RoundMode::TOWARDS_ZERO,         RoundMode::TOWARDS_INFINITY,
     RoundMode::HALF_NEG_INFINITY,    RoundMode::HALF_POS_INFINITY,
@@ -1482,7 +1482,8 @@ TYPED_TEST(TestUnaryRoundFloating, Round) {
     this->AssertUnaryOp(Round, "[]", "[]");
     this->AssertUnaryOp(Round, "[null, 0, Inf, -Inf, NaN, -NaN]",
                         "[null, 0, Inf, -Inf, NaN, -NaN]");
-    this->AssertUnaryOp(Round, MakeArray(min, max), MakeArray(min, max));
+    this->AssertUnaryOp(Round, min, min);
+    this->AssertUnaryOp(Round, max, max);
     switch (round_mode) {
       case RoundMode::TOWARDS_NEG_INFINITY:
         this->AssertUnaryOp(Round, values, "[3, 3, 3, 4, -4, -4, -4]");
@@ -1522,7 +1523,7 @@ TYPED_TEST(TestUnaryRoundFloating, Round) {
   // Test different round N-digits for nearest rounding mode
   int round_ndigits[] = {-2, -1, 0, 1, 2};
   this->SetRoundMode(RoundMode::HALF_TOWARDS_INFINITY);
-  std::string values2("[320, 3.5, 3.075, 4.5, -3.212, -35, -3.073]");
+  std::string values2("[320, 3.5, 3.075, 4.5, -3.212, -35.1234, -3.045]");
   for (auto round_ndigit : round_ndigits) {
     this->SetRoundNdigits(round_ndigit);
     this->AssertUnaryOp(Round, "[]", "[]");
@@ -1531,9 +1532,9 @@ TYPED_TEST(TestUnaryRoundFloating, Round) {
     if (round_ndigit == 0) {
       this->AssertUnaryOp(Round, values2, "[320, 4, 3, 5, -3, -35, -3]");
     } else if (round_ndigit == 1) {
-      this->AssertUnaryOp(Round, values2, "[320, 3.5, 3.1, 4.5, -3.2, -35, -3.1]");
+      this->AssertUnaryOp(Round, values2, "[320, 3.5, 3.1, 4.5, -3.2, -35.1, -3]");
     } else if (round_ndigit == 2) {
-      this->AssertUnaryOp(Round, values2, "[320, 3.5, 3.08, 4.5, -3.21, -35, -3.07]");
+      this->AssertUnaryOp(Round, values2, "[320, 3.5, 3.08, 4.5, -3.21, -35.12, -3.05]");
     } else if (round_ndigit == -2) {
       this->AssertUnaryOp(Round, values2, "[300, 0, 0, 0, 0, 0, 0]");
     } else if (round_ndigit == -1) {
@@ -1632,7 +1633,8 @@ TYPED_TEST(TestUnaryMRoundFloating, MRound) {
     this->AssertUnaryOp(MRound, "[]", "[]");
     this->AssertUnaryOp(MRound, "[null, 0, Inf, -Inf, NaN, -NaN]",
                         "[null, 0, Inf, -Inf, NaN, -NaN]");
-    this->AssertUnaryOp(MRound, MakeArray(min, max), MakeArray(min, max));
+    this->AssertUnaryOp(MRound, min, min);
+    this->AssertUnaryOp(MRound, max, max);
     switch (round_mode) {
       case RoundMode::TOWARDS_NEG_INFINITY:
         this->AssertUnaryOp(MRound, values, "[3, 3, 3, 4, -4, -4, -4]");
@@ -1672,7 +1674,7 @@ TYPED_TEST(TestUnaryMRoundFloating, MRound) {
   // Test different round multiples for nearest rounding mode
   double round_multiples[] = {-2, -0.05, 0.1, 0, 10, 100};
   this->SetRoundMode(RoundMode::HALF_TOWARDS_INFINITY);
-  std::string values2("[320, 3.5, 3.075, 4.5, -3.212, -35, -3.073]");
+  std::string values2("[320, 3.5, 3.075, 4.5, -3.212, -35.1234, -3.045]");
   for (auto round_multiple : round_multiples) {
     this->SetRoundMultiple(round_multiple);
     this->AssertUnaryOp(MRound, "[]", "[]");
@@ -1686,9 +1688,9 @@ TYPED_TEST(TestUnaryMRoundFloating, MRound) {
     if (round_multiple == -2) {
       this->AssertUnaryOp(MRound, values2, "[320, 4, 4, 4, -4, -36, -4]");
     } else if (round_multiple == -0.05) {
-      this->AssertUnaryOp(MRound, values2, "[320, 3.5, 3.1, 4.5, -3.2, -35, -3.05]");
+      this->AssertUnaryOp(MRound, values2, "[320, 3.5, 3.1, 4.5, -3.2, -35.1, -3.05]");
     } else if (round_multiple == 0.1) {
-      this->AssertUnaryOp(MRound, values2, "[320, 3.5, 3.1, 4.5, -3.2, -35, -3.1]");
+      this->AssertUnaryOp(MRound, values2, "[320, 3.5, 3.1, 4.5, -3.2, -35.1, -3]");
     } else if (round_multiple == 0) {
       this->AssertUnaryOp(MRound, values2, "[0, 0, 0, 0, 0, 0, 0]");
     } else if (round_multiple == 10) {

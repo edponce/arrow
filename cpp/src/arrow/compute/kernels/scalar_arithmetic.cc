@@ -923,10 +923,10 @@ struct MRound {
   template <typename T, typename Arg>
   static enable_if_floating_point<Arg, T> Call(KernelContext* ctx, Arg arg, Status*) {
     static_assert(std::is_same<T, Arg>::value, "");
-    auto options = OptionsWrapper<MRoundOptions>::Get(ctx);
     if (std::isnan(arg)) {
       return arg;
     }
+    auto options = OptionsWrapper<MRoundOptions>::Get(ctx);
     const auto mult = std::fabs(T(options.multiple));
     return (mult == T(0)) ? T(0) : (RoundUtils<T, RndMode>::Round(arg / mult) * mult);
   }
