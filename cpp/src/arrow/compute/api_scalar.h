@@ -52,25 +52,20 @@ class ARROW_EXPORT ElementWiseAggregateOptions : public FunctionOptions {
   bool skip_nulls;
 };
 
-/// Rounding modes for Round and MRound functions. General modes are prefixed
-/// with TOWARDS and tie-breaker modes are prefixed with HALF. Common aliases
+/// Rounding modes for round functions. General modes are prefixed with
+/// TOWARDS and tie-breaker modes are prefixed with HALF. Common aliases
 /// are available for several modes.
 enum class RoundMode {
   // Values are used as index during registration of rounding kernels,
-  // so starting value is 0 and continue consecutively.
-  TOWARDS_NEG_INFINITY = 0,  // equivalent to floor
-  DOWNWARD = TOWARDS_NEG_INFINITY,
+  // so values need to begin at 0 and have unit increments.
+  TOWARDS_NEG_INFINITY,  // equivalent to floor
   TOWARDS_POS_INFINITY,  // equivalent to ceiling
-  UPWARD = TOWARDS_POS_INFINITY,
-  TOWARDS_ZERO,  // equivalent to truncate
+  TOWARDS_ZERO,          // equivalent to truncate
   TOWARDS_INFINITY,
   HALF_NEG_INFINITY,
-  HALF_DOWN = HALF_NEG_INFINITY,
   HALF_POS_INFINITY,
-  HALF_UP = HALF_POS_INFINITY,
   HALF_TOWARDS_ZERO,
   HALF_TOWARDS_INFINITY,
-  NEAREST = HALF_TOWARDS_INFINITY,
   HALF_TO_EVEN,
   HALF_TO_ODD,
 };
