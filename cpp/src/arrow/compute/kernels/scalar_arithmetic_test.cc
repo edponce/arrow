@@ -1420,9 +1420,9 @@ TYPED_TEST(TestUnaryRoundSigned, Round) {
     this->AssertUnaryOp(Round, values, ArrayFromJSON(float64(), values));
   }
 
-  // Test different round N-digits for NEAREST rounding mode
+  // Test different round N-digits for nearest rounding mode
   int round_ndigits[] = {-2, -1, 0, 1, 2};
-  this->SetRoundMode(RoundMode::NEAREST);
+  this->SetRoundMode(RoundMode::HALF_TOWARDS_INFINITY);
   for (auto round_ndigit : round_ndigits) {
     this->SetRoundNdigits(round_ndigit);
     this->AssertUnaryOp(Round, "[]", ArrayFromJSON(float64(), "[]"));
@@ -1451,9 +1451,9 @@ TYPED_TEST(TestUnaryRoundUnsigned, Round) {
     this->AssertUnaryOp(Round, values, ArrayFromJSON(float64(), values));
   }
 
-  // Test different round N-digits for NEAREST rounding mode
+  // Test different round N-digits for nearest rounding mode
   int round_ndigits[] = {-2, -1, 0, 1, 2};
-  this->SetRoundMode(RoundMode::NEAREST);
+  this->SetRoundMode(RoundMode::HALF_TOWARDS_INFINITY);
   for (auto round_ndigit : round_ndigits) {
     this->SetRoundNdigits(round_ndigit);
     this->AssertUnaryOp(Round, "[]", ArrayFromJSON(float64(), "[]"));
@@ -1519,9 +1519,9 @@ TYPED_TEST(TestUnaryRoundFloating, Round) {
     }
   }
 
-  // Test different round N-digits for NEAREST rounding mode
+  // Test different round N-digits for nearest rounding mode
   int round_ndigits[] = {-2, -1, 0, 1, 2};
-  this->SetRoundMode(RoundMode::NEAREST);
+  this->SetRoundMode(RoundMode::HALF_TOWARDS_INFINITY);
   std::string values2("[320, 3.5, 3.075, 4.5, -3.212, -35, -3.073]");
   for (auto round_ndigit : round_ndigits) {
     this->SetRoundNdigits(round_ndigit);
@@ -1554,9 +1554,9 @@ TYPED_TEST(TestUnaryMRoundSigned, MRound) {
     this->AssertUnaryOp(MRound, values, ArrayFromJSON(float64(), values));
   }
 
-  // Test different round multiples for NEAREST rounding mode
+  // Test different round multiples for nearest rounding mode
   double round_multiples[] = {-2, -0.05, 0.1, 0, 10, 100};
-  this->SetRoundMode(RoundMode::NEAREST);
+  this->SetRoundMode(RoundMode::HALF_TOWARDS_INFINITY);
   for (auto round_multiple : round_multiples) {
     this->SetRoundMultiple(round_multiple);
     this->AssertUnaryOp(MRound, "[]", ArrayFromJSON(float64(), "[]"));
@@ -1592,9 +1592,9 @@ TYPED_TEST(TestUnaryMRoundUnsigned, MRound) {
     this->AssertUnaryOp(MRound, values, ArrayFromJSON(float64(), values));
   }
 
-  // Test different round multiples for NEAREST rounding mode
+  // Test different round multiples for nearest rounding mode
   double round_multiples[] = {-2, -0.05, 0.1, 0, 10, 100};
-  this->SetRoundMode(RoundMode::NEAREST);
+  this->SetRoundMode(RoundMode::HALF_TOWARDS_INFINITY);
   for (auto round_multiple : round_multiples) {
     this->SetRoundMultiple(round_multiple);
     this->AssertUnaryOp(MRound, "[]", ArrayFromJSON(float64(), "[]"));
@@ -1669,9 +1669,9 @@ TYPED_TEST(TestUnaryMRoundFloating, MRound) {
     }
   }
 
-  // Test different round multiples for NEAREST rounding mode
+  // Test different round multiples for nearest rounding mode
   double round_multiples[] = {-2, -0.05, 0.1, 0, 10, 100};
-  this->SetRoundMode(RoundMode::NEAREST);
+  this->SetRoundMode(RoundMode::HALF_TOWARDS_INFINITY);
   std::string values2("[320, 3.5, 3.075, 4.5, -3.212, -35, -3.073]");
   for (auto round_multiple : round_multiples) {
     this->SetRoundMultiple(round_multiple);
